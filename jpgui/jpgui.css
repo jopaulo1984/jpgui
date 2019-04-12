@@ -1,0 +1,168 @@
+.window button,
+.label,
+.window input,
+.window select,
+.window textarea,
+.window fieldset,
+.window table,
+.window th,
+.window td,
+.window .panel,
+.window .title {
+  font-family: 'Helvetica','sans-erif';
+  font-size: 12px;
+}
+
+.date,
+.button,
+.label,
+.input-submit,
+.input-text,
+.input-email,
+.input-button,
+.input-date,
+.select,
+.textarea {
+  padding: 5px;
+  margin: 2px;
+}
+
+/*Entrys****************************************/
+.input-text {
+   border: 1px solid #c0c0c0;
+}
+
+.readonly {
+   background: #c9c9c9;
+}
+
+.input-text {
+  width: 100px;
+  font-family: 'Monospace';
+}
+/***********************************************/
+
+/*Buttons***************************************/
+.button,
+.input-submit,
+.input-button,
+.select {
+  background: #E8E8E8;
+  border: 1px solid #9C9999;
+}
+
+.button:active,
+.input-submit:active,
+.input-button:active {
+  /*box-shadow: 0px 0px 5px #000000;*/
+  background: #dddddd;
+}
+
+.button:hover,
+.input-submit:hover,
+.input-button:hover {
+  /*box-shadow: 0px 0px 5px #000000;*/
+}
+
+.buttons {
+  border-top: 1px solid #7F7F7F;
+  text-align: right;
+  margin-top: 10px;
+}
+/***********************************************/
+
+/*Windows***************************************/
+.window {
+  box-shadow: 0px 0px 10px black;
+  background-color: #dddddd;
+}
+
+.window .title {
+  font-size: 13px;
+  font-weight: none;
+}
+
+.window .top-panel {
+  background: #4D4D4D;
+  color: white;
+  padding: 2px;
+  margin-bottom: 5px;
+  cursor: default;
+}
+
+.window .top-panel:active {
+  cursor: move;
+}
+
+.window .title-panel {
+}
+
+.window .close-button {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  border-radius: 1px;
+  border: 1px solid #7F7F7F;
+  background: #4D4D4D;
+  color: white;
+  font-size: 70%;
+}
+
+.window .close-button:active {
+  background: #5A735A;
+}
+/***********************************************/
+
+/*tableview*/
+.tableview {
+  overflow: auto;
+  background-color: #7f7f7f;
+}
+
+.tableview .tbody {
+  display: block;
+}
+
+.tableview .thead,
+.tableview .panel,
+.tableview .tbody {
+  min-width: 100%;
+}
+
+.tableview .panel {
+  display: inline-block;
+  height: calc(100% - 30px);
+  overflow-y: auto;
+  margin-top: -1px;
+}
+
+.tableview  tr {
+  cursor: default;
+  width: 100%;
+}
+
+.tableview .thead tr {
+  background-color: #B0B0B0;
+}
+
+.tableview .tbody tr {
+  /*background-color: white;*/
+}
+
+.tableview table {
+  border-collapse: collapse;
+}
+
+.tableview th,
+.tableview td {
+  border: 1px solid black;
+  min-width: 100px;
+}
+
+.tableview .no-selected {
+  background-color: white;
+}
+
+.tableview .selected {
+  background-color: #A0A0F0;
+}

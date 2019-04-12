@@ -1,0 +1,82 @@
+<html>
+    <head>
+        <meta charset="utf-8"/>
+        <title>Testes GUI</title>
+        <link rel="stylesheet" type="text/css" href="jpgui.css"/>
+        <script type="text/javascript" src="jpgui.js"></script>
+        <script type="text/javascript">
+            function showmodal() {
+                var btnCanc = newJPButton(null,'Cancelar');
+                var btnOk = newJPButton(null,'Ok');
+                btnCanc.result = Result.CANCEL;
+                btnOk.result = Result.OK;
+                var d = newJPDialog(null,'Teste Modal',null,[btnCanc,btnOk]);
+                d.showModal(function() {
+                    alert((['Null','Ok','Cancel','Yes','No'])[this.result]);
+                    this.destroy();
+                });
+            }
+
+            function showlist() {
+              var dados = [
+                ['7521','João Paulo Silva','jopaulo@email.com','Rua Antônio Leonardo Pimenta, 98, cs 25, Centro, Iraguaí, RJ'],
+                ['3642','Tatiane Ferreira','tatiferreira@email.com','Rua da Passagem, 31, cs 02, V Entre Rios, Belford Roxo, RJ']
+              ];
+              var btnCanc = newJPButton(null,'Cancelar');
+              var btnOk = newJPButton(null,'Inserir');
+              var panel = newJPPanel(null);
+              var list = newJPTableView(panel);
+              var grp = newElement(panel,'fieldset');
+
+              list.style.height = '300px';
+              
+              newElement(grp,'legend').innerText = 'Dados';
+
+              var grid = newJPGrid(grp);
+              var uid = newJPInput(null,'text');
+              var nome = newJPInput(null,'text');
+              var email = newJPInput(null,'email');
+              var ender = newJPInput(null,'text');
+
+              grid.insert(0,0,newJPLabel(null,'ID'));
+              grid.insert(0,1,uid);
+              grid.insert(1,0,newJPLabel(null,'Nome'));
+              grid.insert(1,1,nome);
+              grid.insert(2,0,newJPLabel(null,'Email'));
+              grid.insert(2,1,email);
+              grid.insert(3,0,newJPLabel(null,'Endereço'));
+              grid.insert(3,1,ender);
+
+              btnCanc.result = Result.CANCEL;
+              btnOk.result = Result.OK;
+              var d = newJPDialog(null,'Teste Modal',panel,[btnCanc,btnOk],false,true);
+              d.showModal(function(sender,result) {
+                if(result==Result.CANCEL){sender.destroy();}
+                else if(result==Result.OK){
+                  dados.push([uid.value,nome.value,email.value,ender.value]);
+                  list.setValues(dados);
+                }
+              });
+              
+              d.style.width = '640px';
+              
+              list.setHeader(['ID','Nome','email','Endereço']);
+              list.setValues(dados);
+              
+            }
+            
+            function showLogin(){
+                var win = newJPWindow();
+                var frm = newJPLogin(win);
+                win.show();
+            }
+            
+        </script>
+    </head>
+    <body>
+        <input type="button" value="Janela Modal" onclick="showmodal()" />
+        <input type="button" value="Mensagem" onclick="newDialogMessage('Janela de Mensagem','Isto é uma mensagem!',function(){alert('Fechado!');})" />
+        <input type="button" value="Lista" onclick="showlist()" />
+        <input type="button" value="Login" onclick="showLogin()" />
+    </body>
+</html>
