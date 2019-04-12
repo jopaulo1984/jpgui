@@ -19,8 +19,8 @@
 
             function showlist() {
               var dados = [
-                ['7521','João Paulo Silva','jopaulo@email.com','Rua Antônio Leonardo Pimenta, 98, cs 25, Centro, Iraguaí, RJ'],
-                ['3642','Tatiane Ferreira','tatiferreira@email.com','Rua da Passagem, 31, cs 02, V Entre Rios, Belford Roxo, RJ']
+                ['4725','Lucas Silva','lucas_silva@email.com','Rua Das Orquídeas, S/N, Centro, Pinarauí, RJ'],
+                ['3642','Alessandra Rosa','alerosa@email.com','Travessa São Benedito, 31, Caixa Prego, MG']
               ];
               var btnCanc = newJPButton(null,'Cancelar');
               var btnOk = newJPButton(null,'Inserir');
@@ -49,7 +49,7 @@
 
               btnCanc.result = Result.CANCEL;
               btnOk.result = Result.OK;
-              var d = newJPDialog(null,'Teste Modal',panel,[btnCanc,btnOk],false,true);
+              var d = newJPDialog(null,'Lista de Endereços',panel,[btnCanc,btnOk],false,true);
               d.showModal(function(sender,result) {
                 if(result==Result.CANCEL){sender.destroy();}
                 else if(result==Result.OK){
