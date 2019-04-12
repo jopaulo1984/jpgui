@@ -142,7 +142,8 @@
 }
 
 .tableview .thead tr {
-  background-color: #B0B0B0;
+  background-color: #1B7FA7;
+  color: white;
 }
 
 .tableview .tbody tr {
@@ -155,7 +156,8 @@
 
 .tableview th,
 .tableview td {
-  border: 1px solid black;
+  padding: 5px 10px;
+  border-bottom: 1px solid #BEC9CC;
   min-width: 100px;
 }
 
@@ -164,5 +166,5 @@
 }
 
 .tableview .selected {
-  background-color: #A0A0F0;
+  background-color: #ADD8E6;
 }
