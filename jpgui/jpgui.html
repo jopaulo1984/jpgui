@@ -1,3 +1,4 @@
+
 <html>
     <head>
         <meta charset="utf-8"/>
@@ -18,15 +19,17 @@
             }
 
             function showlist() {
-              var dados = [
-                ['4725','Lucas Silva','lucas_silva@email.com','Rua Das Orquídeas, S/N, Centro, Pinarauí, RJ'],
-                ['3642','Alessandra Rosa','alerosa@email.com','Travessa São Benedito, 31, Caixa Prego, MG']
-              ];
+              var mywindow = newJPWindow();
+              var dados = [];
               var btnCanc = newJPButton(null,'Cancelar');
               var btnOk = newJPButton(null,'Inserir');
-              var panel = newJPPanel(null);
+              var panel = newJPPanel(mywindow);
               var list = newJPTableView(panel);
               var grp = newElement(panel,'fieldset');
+              
+              panel.style.overflow = 'auto';
+              
+              mywindow.setTitle('Lista');
 
               list.style.height = '300px';
               
@@ -37,6 +40,16 @@
               var nome = newJPInput(null,'text');
               var email = newJPInput(null,'email');
               var ender = newJPInput(null,'text');
+              
+              uid.style.width = '120px';
+              nome.style.width = '320px';
+              email.style.width = '320px';
+              ender.style.width = '380px';
+              
+              uid.value = '5631';
+              nome.value = 'Tatiane Do Carmo';
+              email.value = 'taticarm@email.com';
+              ender.value = 'Rua Ambrósio, 45, Rita de Cássia, Rio de Janeiro, RJ';
 
               grid.insert(0,0,newJPLabel(null,'ID'));
               grid.insert(0,1,uid);
@@ -46,22 +59,19 @@
               grid.insert(2,1,email);
               grid.insert(3,0,newJPLabel(null,'Endereço'));
               grid.insert(3,1,ender);
-
-              btnCanc.result = Result.CANCEL;
-              btnOk.result = Result.OK;
-              var d = newJPDialog(null,'Lista de Endereços',panel,[btnCanc,btnOk],false,true);
-              d.showModal(function(sender,result) {
-                if(result==Result.CANCEL){sender.destroy();}
-                else if(result==Result.OK){
-                  dados.push([uid.value,nome.value,email.value,ender.value]);
-                  list.setValues(dados);
-                }
-              });
+              grid.insert(3,2,btnOk);
               
-              d.style.width = '640px';
+              btnOk.onclick = function(){
+                dados.push([uid.value,nome.value,email.value,ender.value]);
+                list.setValues(dados);
+              }
+              
+              mywindow.size(560, 360);
               
               list.setHeader(['ID','Nome','email','Endereço']);
               list.setValues(dados);
+              
+              mywindow.show();
               
             }
             
