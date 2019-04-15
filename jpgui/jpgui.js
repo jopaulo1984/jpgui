@@ -1,7 +1,16 @@
 
-Result = {NULL:0,OK:1,CANCEL:2,YES:3,NO:4};
+/*
+* Descrição: JPGUI é uma biblioteca gráfica que facilita a construção de janelas e 
+* controles em páginas web.
+* Autor: João Paulo F da Silva
+* Modificação: 04/2019
+* Versão: 1.0.1
+*/
 
-function newElement(parent,tag='') {
+Result = {NULL:0, OK:1, CANCEL:2, YES:3, NO:4};
+Buttons = {NONE:0, LEFT:1, RIGHT:2};
+
+function newElement(parent, tag='') {
   var element = document.createElement(tag);
   if(parent)
     parent.appendChild(element);
@@ -36,15 +45,20 @@ function newJPInput(parent=null,type='text',value='',readonly=false) {
 }
 
 function newJPLabel(parent=null,text='') {
-  var element = newElement(parent,'span');
+  var element = newElement(parent, 'div');
+  element.style.display = 'inline-block';
   element.className = 'label';
-  Object.defineProperty(element,'text',{
-    set(value){
-      element.innerText = value;
-    },
-    get(){return element.innerText;}
-  });
-  element.text = text;
+  
+  element.setText = function(value) {
+    this.innerText = value;
+  }
+  
+  element.getText = function() {
+    return this.innerText;
+  }
+  
+  element.setText(text);
+  
   return element;
 }
 
@@ -338,7 +352,7 @@ function newJPMask(parent=null,child=null,background='rgba(0,0,0,0.5)') {
 
 }
 
-function newJPWindow(parent=null,toplevel=false,title='Window',buttons=false) {
+function newJPWindow(parent=null,toplevel=false,title='Window',buttons=true,resizable=true) {
   
   if (!parent) parent = document.getElementsByTagName("body")[0];
   
@@ -352,76 +366,191 @@ function newJPWindow(parent=null,toplevel=false,title='Window',buttons=false) {
       element.mask.destroy();
     };
   }
-
+  
   element.className = 'window';
 
   /***GUI***/
-  //titulo e botoes
-  var ptop = newJPPanel(element);
-  var ptitle = newJPPanel(ptop,true);
-  var title = newJPLabel(ptitle,title);
+  element.ptop = newJPPanel(element);
+  element.mainpanel = newJPPanel(element);
+  
+  element.mainpanel.style.overflow = 'auto';
 
   if(buttons) {
-    var botoes = newJPPanel(element,true);
-    var btnclose = newJPButton(botoes,'X');
-    btnclose.className = 'close-button';
-    btnclose.window = element;
-    btnclose.onclick = function() {
+    element.botoes = newJPPanel(element.ptop,true);
+    element.botoes.className = 'window-buttons';
+    
+    if(element.resizable) {
+      element.btnmaxmin = newJPButton(element.botoes,'+');
+      element.btnmaxmin.className = 'window-button minmax-button';
+      element.btnmaxmin.window = element;
+      element.btnmaxmin.onclick = function() {
+        if(this.window.maximinized()) {
+          this.window.minimize();
+          element.btnmaxmin.value = '+';
+        }else{
+          this.window.maximinize();
+          element.btnmaxmin.value = '-';
+        }
+      }
+    }
+    
+    element.btnclose = newJPButton(element.botoes,'X');
+    element.btnclose.className = 'window-button close-button';
+    element.btnclose.window = element;
+    element.btnclose.onclick = function() {
       if(this.window.onclose&&this.window.onclose()){
         return;
       }
       this.window.destroy();
     }
+    
+  }
+  
+  element.ptitle = newJPLabel(element.ptop, title);
+
+  element.ptitle.className = 'title-panel';
+  element.ptop.className = 'top-panel';
+  element.ptitle.className = 'title';
+    
+  element.onresized = null;
+  
+  element.doresized = function() {
+    this.updateSize();    
+    this.onresized && this.onresized(this.offsetWidth, this.offsetHeight);
+  }
+  
+  element.maximinize = function() {
+    if(this.maximinized()) return;
+    this.style.width = '100%';
+    this.style.height = '100%';
+    this.style.left = '0px';
+    this.style.top = '0px';
+    this.doresized();
+  }
+  
+  element.minimize = function() {
+    if(!this.maximinized()) return;
+    this.style.width = this.defaultWidth + 'px';
+    this.style.height = this.defaultHeight + 'px';
+    this.style.top = this.defaultTop + 'px';
+    this.style.left = this.defaultLeft + 'px';
+    this.doresized();
+  }
+  
+  element.maximinized = function() {
+    return this.style.width === '100%' && this.style.height === '100%';
+  }
+  
+  element.geometry = function(x, y, width, height) {
+    this.size(width, height);
+    this.move(x, y);
+  }
+  
+  element.updateSize = function() {    
+    this.mainpanel.style.width = this.offsetWidth + 'px';
+    this.mainpanel.style.height = (this.offsetHeight - this.ptop.offsetHeight) + 'px';
+  }
+  
+  element.size = function(width, height) {
+    if(this.maximinized()) return;
+    if(this.offsetWidth===width&&this.offsetHeight===height) return;
+    this.defaultHeight = height;
+    this.defaultWidth = width;
+    this.style.width = width + 'px';
+    this.style.height = height + 'px';
+    this.doresized();
   }
 
-  ptop.className = 'top-panel';
-  ptitle.className = 'title-panel';
-  title.className = 'title';
-
-  /*movimentando a janela*/
-  ptop.myWindow = element;
-  ptop.mdown = null; //{x:0,y:0};
-
-  element.ptop = ptop;
-
-  ptop.onmousedown = function(e) {
-      if(!e.buttons==1)return;
-      var x = this.myWindow.offsetLeft;
-      var y = this.myWindow.offsetTop;
-      this.mdown = {evt:e,wx:x,wy:y};
-      this.myWindow.parentNode.selectedWindow = this.myWindow;
-  };
-
-  element.parentNode.onmousemove = function(e) {
+  element.parentNode.onmousemove = function(evt) {
       if(!this.selectedWindow) return;
-      var win = this.selectedWindow;
-      if(!win.ptop.mdown) return;
-      if(e.buttons==0){
-          win.ptop.mdown = null;
-          return;
+      var win = this.selectedWindow;      
+      if(!win.mdown) return;    
+      var dx = evt.screenX - win.mdown.screen.x;
+      var dy = evt.screenY - win.mdown.screen.y;  
+      if(win.mdown.moving) {
+        win.move(win.mdown.left+dx, win.mdown.top+dy);
+      }else if(win.mdown.resizing) {
+        if(win.style.cursor=='se-resize') {
+          win.size(win.mdown.width + dx, win.mdown.height + dy);
+        }else if(win.style.cursor=='e-resize') {
+          win.size(win.mdown.width + dx, win.mdown.height);
+        }else if(win.style.cursor=='s-resize') {
+          win.size(win.mdown.width, win.mdown.height + dy);
+        }
       }
-      var dx = e.clientX-win.ptop.mdown.evt.clientX;
-      var dy = e.clientY-win.ptop.mdown.evt.clientY;
-      win.move(win.ptop.mdown.wx+dx,win.ptop.mdown.wy+dy);
   };
+  
+  element.onmousedown = function(evt) {
+    this.mdown = {offset:{x:evt.offsetX,y:evt.offsetY}, 
+                  screen:{x:evt.screenX,y:evt.screenY},
+                  left:this.offsetLeft,
+                  top:this.offsetTop,
+                  width:this.offsetWidth, 
+                  height:this.offsetHeight,
+                  addWidth:function(x) {
+                              var d = x - this.x;
+                              return this.width + d;
+                           },
+                  addHeight:function(y) {
+                              var d = y - this.y;
+                              return this.height + d;
+                           },
+                  moving:this.ptop.style.cursor=='move'&&evt.buttons==Buttons.LEFT,
+                  resizing:this.resizable&&(this.style.cursor=='se-resize'||this.style.cursor=='e-resize'||this.style.cursor=='s-resize')&&evt.buttons===Buttons.LEFT
+                  };
+    this.parentNode.selectedWindow = this;
+  }
+  
+  element.onmouseup = function(){
+    this.mdown = null;
+  }
+  
+  element.onmousemove = function(evt) {   
+    if(this.mdown) return; 
+    intop = evt.offsetY < this.ptop.offsetHeight;
+    
+    if(intop) {
+      this.ptop.style.cursor = 'move';
+      return;
+    }else{
+      if(this.ptop.style.cursor != 'default') this.ptop.style.cursor = 'default';
+    }
+      
+    if(!this.resizable) {
+      if(this.style.cursor != 'default') this.style.cursor = 'default';
+      return;
+    }
+    
+    var rx = this.offsetWidth - 10;
+    var by = this.offsetHeight - 10;
+    inborderx = rx < evt.offsetX && evt.offsetX < this.offsetWidth;
+    inbordery = by < evt.offsetY && evt.offsetY < this.offsetHeight;
+    if(!(inborderx||inbordery)) {
+      this.style.cursor = 'default';
+    }else if(inborderx&&inbordery) {
+      this.style.cursor = 'se-resize';
+    }else if(inborderx) {
+      this.style.cursor = 'e-resize';
+    }else if(inbordery) {
+      this.style.cursor = 's-resize';
+    }    
+  }
 
-  ptop.onmouseup = function(e) {
+  element.ptop.onmouseup = function(e) {
       this.mdown = null;
   };
   /*=========================*/
-
-  /*if(!parent){
-    var body = document.getElementsByTagName("body")[0];
-    body.appendChild(this.content);
-  }*/
-
+  
   element.style.position = "absolute";
 
   //properties
   element.onclose = null;
 
   //methods and functions
-  element.move = function(x,y) {
+  element.move = function(x, y) {
+    if(this.maximinized()) return;
+    this.defaultLeft = x;
+    this.defaultTop = y;
     this.style.top = y + "px";
     this.style.left = x + "px";
   };
@@ -439,21 +568,79 @@ function newJPWindow(parent=null,toplevel=false,title='Window',buttons=false) {
     emy = (this.offsetHeight / 2).toFixed(0);
     this.move(wmx-emx,wmy-emy);
   };
+  
+  element.setTitle = function(value) {
+    this.ptitle.setText(value);
+  }
+  
+  element.setResizable = function(value) {
+    this.resizable = value;
+    this.setButtonsVisible(this.botoes!==null);
+  }
+  
+  element.setButtonsVisible = function(value) {
+    
+    if(this.botoes) {
+      this.botoes.destroy();
+    }
+    
+    if(value) {
+      this.botoes = newJPPanel(this.ptop,true);
+      this.botoes.className = 'window-buttons';
+      
+      if(this.resizable) {
+        this.btnmaxmin = newJPButton(this.botoes,'+');
+        this.btnmaxmin.className = 'window-button minmax-button';
+        this.btnmaxmin.window = this;
+        this.btnmaxmin.onclick = function() {
+          if(this.window.maximinized()) {
+            this.window.minimize();
+            this.btnmaxmin.value = '+';
+          }else{
+            this.window.maximinize();
+            this.btnmaxmin.value = '-';
+          }
+        }
+      }
+      
+      this.btnclose = newJPButton(this.botoes,'X');
+      this.btnclose.className = 'window-button close-button';
+      this.btnclose.window = this;
+      this.btnclose.onclick = function() {
+        if(this.window.onclose&&this.window.onclose()){
+          return;
+        }
+        this.window.destroy();
+      }
+      
+    }
+  }
+  
+  element.appendChild = function(child) {
+    element.mainpanel.appendChild(child);
+  }
+  
+  //
+  element.setResizable(resizable);
+  element.setButtonsVisible(buttons);
+  element.geometry(0,0,10,10);
 
   return element;
 
 }
 
-function  newJPDialog(parent=null,title='Mensagem',content=null,buttons=[],exit_onclick=false,view_buttons=false) {
+function  newJPDialog(parent=null, title='Mensagem', content=null, buttons=[], exit_onclick=false) {
 
-  var element = newJPWindow(parent,true,title,view_buttons);
+  var element = newJPWindow(parent, true, title);
+  element.setButtonsVisible(false);
   element.className += " dialog";
   element.content = newElement(element,'div');
+  element.content.className = "content";
   element.content.style.padding = '10px';
 
-  var dbuttons = newJPPanel(element);
-  dbuttons.className = "buttons";
-
+  element.dbuttons = dbuttons = newJPPanel(element);
+  dbuttons.className = "buttons";  
+  
   if(exit_onclick){
     element.mask.onclick = function (e) {
       var child = this.child;
@@ -476,23 +663,37 @@ function  newJPDialog(parent=null,title='Mensagem',content=null,buttons=[],exit_
         };
     }
   });
-
-  element.setContent = function(obj) {
+  
+  element.setContent = function(content) {
     this.content.innerHTML = '';
-    if(obj) this.content.appendChild(obj);
+    if(content===null) return;
+    this.content.appendChild(content);
+    if(this.dbuttons.offsetWidth > this.content.offsetWidth) {
+      this.style.minWidth  = (this.dbuttons.offsetWidth + 30) + 'px';
+    }else{
+      this.style.minWidth  = (this.content.offsetWidth + 30)  + 'px';
+    }
+    this.style.minHeight = (20 + this.ptop.offsetHeight + this.content.offsetHeight + this.dbuttons.offsetHeight) + 'px';
+    this.updateSize();
     this.alignCenter();
   }
-
-  element.setContent(content);
-
-  element.alignCenter();
 
   element.showModal = function(onresult){
       this.onresult = onresult;
       this.show();
   };
+  
+  element.onresized = function() {
+    this.content.style.width = (this.offsetWidth - 20) + 'px';
+    this.content.style.height = (this.offsetHeight - this.dbuttons.offsetHeight - this.ptop.offsetHeight - 40) + 'px';
+  }
 
-  this.onresult = null;
+  element.onresult = null;
+
+  element.setContent(content);
+
+  element.alignCenter();
+  
 
   return element;
 
@@ -501,8 +702,9 @@ function  newJPDialog(parent=null,title='Mensagem',content=null,buttons=[],exit_
 function newDialogMessage(title,msg,onclose=null) {
   var bok = newJPButton(null,'Ok');
   bok.result = Result.OK;
-  var dlg001 =  newJPDialog(null,title,newJPLabel(null,msg),[bok],true);
-  dlg001.ondestroy = onclose;
-  dlg001.showModal(function (sender,result) {sender.destroy();});
-  return dlg001;
+  var element =  newJPDialog(null,title,null,[bok],true);
+  element.setContent(label=newJPLabel(null,msg))
+  element.ondestroy = onclose;
+  element.showModal(function (sender,result) {sender.destroy();});
+  return element;
 }
