@@ -506,14 +506,17 @@ function newJPWindow(parent=null,toplevel=false,title='Window',buttons=true,resi
   }
   
   element.onmousemove = function(evt) {   
-    if(this.mdown) return; 
-    intop = evt.offsetY < this.ptop.offsetHeight;
+    if(this.mdown) return;
     
-    if(intop) {
+    var Y = evt.pageY - this.offsetTop;
+    var X = evt.pageX - this.offsetLeft;
+    
+    if(Y < this.ptop.offsetHeight) { //se ponteiro sobre o painel do topo.
       this.ptop.style.cursor = 'move';
       return;
     }else{
-      if(this.ptop.style.cursor != 'default') this.ptop.style.cursor = 'default';
+      if(this.ptop.style.cursor != 'default') 
+        this.ptop.style.cursor = 'default';
     }
       
     if(!this.resizable) {
@@ -523,8 +526,10 @@ function newJPWindow(parent=null,toplevel=false,title='Window',buttons=true,resi
     
     var rx = this.offsetWidth - 10;
     var by = this.offsetHeight - 10;
-    inborderx = rx < evt.offsetX && evt.offsetX < this.offsetWidth;
-    inbordery = by < evt.offsetY && evt.offsetY < this.offsetHeight;
+    
+    inborderx = rx < X && X < this.offsetWidth;
+    inbordery = by < Y && Y < this.offsetHeight;
+    
     if(!(inborderx||inbordery)) {
       this.style.cursor = 'default';
     }else if(inborderx&&inbordery) {
@@ -533,7 +538,8 @@ function newJPWindow(parent=null,toplevel=false,title='Window',buttons=true,resi
       this.style.cursor = 'e-resize';
     }else if(inbordery) {
       this.style.cursor = 's-resize';
-    }    
+    }
+    
   }
 
   element.ptop.onmouseup = function(e) {
