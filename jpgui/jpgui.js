@@ -4,7 +4,7 @@
 * controles em páginas web.
 * Autor: João Paulo F da Silva
 * Modificação: 04/2019
-* Versão: 1.0.1
+* Versão: 1.0.2
 */
 
 
