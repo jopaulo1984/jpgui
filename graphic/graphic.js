@@ -164,7 +164,6 @@ function Graphic(master=null, series=[], w=760, h=560) {
     self.__series = series;
     self.__y_0 = 0;
     self.__x_0 = 0;
-    self.__divsize = 60;
     self.__divsizex = 60;
     self.__divsizey = 60;
     self.__leg_group = new GraphicLegendGroup(self);
@@ -198,16 +197,6 @@ function Graphic(master=null, series=[], w=760, h=560) {
             this.__y_0 = value;
             this.__draw_all();
         }
-    });
-    
-    Object.defineProperty(self,'divsize',{
-        set(value){
-            this.__divsize = value;
-            this.__divsizex = value;
-            this.__divsizey = value;
-            this.__draw_all();
-        },
-        get(){return this.__divsize;}
     });
     
     Object.defineProperty(self,'divsizex',{
@@ -269,11 +258,11 @@ function Graphic(master=null, series=[], w=760, h=560) {
         var subdivwx = this.__divsizex / 2;
         var subdivwy = this.__divsizey / 2;
         
-        var f   = function(i) {return Math.trunc(i / subdivw);}
+        //var f   = function(i, sub) {return Math.trunc(i / sub);}
         var f_0 = function(i, j) {return (j / 2) + i;}
         
-        var x_0 = gleft + f_0(this.x_0, gw / subdivwx);
-        var y_0 = gtop  + f_0(-this.y_0, gh / subdivwy);
+        var x_0 = gleft + f_0( this.x_0, gw /* subdivwx*/);
+        var y_0 = gtop  + f_0(-this.y_0, gh /* subdivwy*/);
         
         var ndivx = gw / this.__divsizex;
         var ndivy = gh / this.__divsizey;
@@ -290,6 +279,15 @@ function Graphic(master=null, series=[], w=760, h=560) {
         
         var minvaluesx = getmin(Math.floor(60 / this.divsizex));
         var minvaluesy = getmin(Math.floor(60 / this.divsizey));
+
+        var axelim = function(pos,min,max) {
+            if(min<pos&&pos<max) return pos;
+            if(pos<min) return min;
+            if(pos>max) return max;
+        }
+
+        var ax = axelim(x_0,gleft,gright);
+        var ay = axelim(y_0,gtop,gbottom);
         
         /**inserindo linhas veritcais das subdivisões**/
         (function(self) {
@@ -297,17 +295,13 @@ function Graphic(master=null, series=[], w=760, h=560) {
             var minsuby = subdivwy * minvaluesy / 2;
             //inserindo as linhas verticais do x positivo:
             var x = 0;
-            var j = 0;
             var i = 0;
             while (i++ < 1000) {
                 var cx = x_0 + x + 2;
-                if (cx > gright) {
-                    break;
-                }
-                if(x!=0) {
+                if (cx > gright) {break;}
+                if(x!=0&&cx>gleft) {
                     self.createLine(cx, gtop+1, cx, gbottom-1, {strokestyle:self.__sdcolor, tags:'base'});
                 }
-                j++;
                 x += minsubx;
             }
             
@@ -319,10 +313,9 @@ function Graphic(master=null, series=[], w=760, h=560) {
                 var cx = x_0 + x + 2;
                 if (cx < gleft) {
                     break;}
-                if(x!=0) {
+                if(x!=0&&cx<gright) {
                     self.createLine(cx, gtop+1, cx, gbottom-1, {strokestyle:self.__sdcolor, tags:'base'});
                 }
-                j++;
                 x -= minsubx;
             }
             
@@ -333,12 +326,10 @@ function Graphic(master=null, series=[], w=760, h=560) {
             var i = 0;
             while (i++ < 1000) {
                 var cy = y_0 + y;
-                if (cy < gtop) {
-                    break;}
-                if(y!=0) {
+                if (cy < gtop) {break;}
+                if(y!=0&&cy<gbottom) {
                     self.createLine(gleft+1, cy, gright-1, cy, {strokestyle:self.__sdcolor, tags:'base'});
                 }
-                j++;
                 y -= minsuby;
             }
             
@@ -348,9 +339,8 @@ function Graphic(master=null, series=[], w=760, h=560) {
             var i = 0;
             while (i++ < 1000) {
                 var cy = y_0 + y;
-                if (cy > gbottom) {
-                    break;}
-                if(y!=0){
+                if (cy>gbottom) {break;}
+                if(y!=0&&cy>gtop){
                     self.createLine(gleft+1, cy, gright-1, cy, {strokestyle:self.__sdcolor, tags:'base'});
                 }
                 j++;
@@ -364,82 +354,68 @@ function Graphic(master=null, series=[], w=760, h=560) {
             var minsuby = self.divsizey * minvaluesy;
             //inserindo as linhas verticais do x positivo:
             var x = 0;
-            var j = 1;
+            var j = 0;
             var i = 0;
             while (i++ < 1000) {
                 var cx = x_0 + x + 2;
-                if (cx > gright) {
-                    break;}
-                if(x!=0) {
-                    //if(j % minvaluesx == 0) {
+                if (cx>gright) {break;}
+                if(x!=0&&gleft<cx) {
                     self.createLine(cx, gtop+1, cx, gbottom-1, {strokestyle:self.__dcolor, tags:'base'});
-                    self.createText(cx, y_0, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});
-                    //}
-                    j++;
+                    self.createText(cx, ay, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});                    
                 }
-                x += minsubx; //self.__divsizex;
+                j++;
+                x += minsubx;
             }
             
             //inserindo as linhas verticais do x negativo:
             var x =  0;
-            var j = -1;
+            var j =  0;
             var i =  0;
             while (i++ < 1000) {
                 var cx = x_0 + x + 2;
-                if (cx < gleft) {
-                    break;
-                }
-                if(x!=0)  {
-                    //if(j % minvaluesx == 0) {
+                if (cx < gleft) {break;}
+                if(x!=0&&cx<gright) {
                     self.createLine(cx, gtop+1, cx, gbottom-1, {strokestyle:self.__dcolor, tags:'base'});
-                    self.createText(cx, y_0, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});
-                    //}
-                    j--;
+                    self.createText(cx, ay, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});
                 }
-                x -= minsubx; //self.__divsizex;
+                j--;
+                x -= minsubx;
             }
             
             /**inserindo linhas horizontais**/
             //inserindo as linhas horizontais do y positivo:
             var y = 0;
-            var j = 1;
+            var j = 0;
             var i = 0;
             while (i++ < 1000) {
                 var cy = y_0 + y;
-                if (cy < gtop) {
-                    break;
-                }
-                if(y!=0) {
-                    //if(j % minvalues == 0) {
+                if (cy < gtop) {break;}
+                if(y!=0&&cy<gbottom) {
                     self.createLine(gleft+1, cy, gright-1, cy, {strokestyle:self.__dcolor, tags:'base'});
-                    self.createText(x_0, cy, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});
-                    //}
-                    j++;
+                    self.createText(ax, cy, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});
                 }
-                y -= minsuby; //self.__divsize;
+                j++;
+                y -= minsuby;
             }
             
             //inserindo as linhas horizontais do y negativo:
             var y =  0;
-            var j = -1;
+            var j =  0;
             var i =  0;
             while (i++ < 1000) {
                 var cy = y_0 + y;
-                if (cy > gbottom) {
-                    break;
-                }
-                if(y!=0) {
-                    //if(j % minvalues == 0) {
+                if (cy > gbottom) {break;}
+                if(y!=0&&gtop<cy) {
                     self.createLine(gleft+1, cy, gright-1, cy, {strokestyle:self.__dcolor, tags:'base'});
-                    self.createText(x_0, cy, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});
-                    //}
-                    j--;
+                    self.createText(ax, cy, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});
                 }
-                y += minsuby; //self.__divsize;
+                j--;
+                y += minsuby;
             }
         })(this);
 
-        this.createLine(gleft, gtop, gleft, gbottom, {strokecolor:self.__xycolor, tags:"base"});
+        this.createLine(gleft, ay, gright, ay, {strokestyle:self.__xycolor,tags:'base',linewidth:1});
+        this.createLine(ax, gtop, ax, gbottom, {strokestyle:self.__xycolor,tags:'base',linewidth:1});
         
         this.__leg_group.set_anchor(gright + 10, 20, false);
 
@@ -469,13 +445,10 @@ function Graphic(master=null, series=[], w=760, h=560) {
 
         f_0 = function(i, j) {return (j / 2) + i};
 
-        y_0 = gtop  + f_0(-this.y_0, gh / subdivwy);
-        x_0 = gleft + f_0( this.x_0, gw / subdivwx);
+        y_0 = gtop  + f_0(-this.y_0, gh /* subdivwy*/);
+        x_0 = gleft + f_0( this.x_0, gw /* subdivwx)*/);
 
         var self = this;
-
-        this.createLine(gleft, y_0, gright, y_0, {strokestyle:self.__xycolor,tags:'series',linewidth:1});
-        this.createLine(x_0, gtop, x_0, gbottom, {strokestyle:self.__xycolor,tags:'series',linewidth:1});
                 
         f = function(value, y_div) {return y_0 - (self.__divsizey/y_div) * value}
         g = function(value, x_div) {return x_0 + (self.__divsizex/x_div) * value}
@@ -532,10 +505,11 @@ function Graphic(master=null, series=[], w=760, h=560) {
                 for(var i=1;i<serie.points.length;i++) {
                     p1 = serie.points[i-1];
                     p2 = serie.points[i];
-                    /*lp = get_limited_points({x:g(p1.x, serie.x_div),y:f(p1.y, serie.y_div)}, {x:g(p2.x, serie.x_div),y:f(p2.y, serie.y_div)});
+                    lp = get_limited_points({x:g(p1.x, serie.x_div),y:f(p1.y, serie.y_div)}, {x:g(p2.x, serie.x_div),y:f(p2.y, serie.y_div)});
                     if (lp.x1) {
                         self.createLine(lp.x1, lp.y1, lp.x2, lp.y2, {strokestyle:serie.color, linewidth:serie.width, tags:'series'});
-                    }*/
+                    }
+                    /*
                     ppx1 = {x:g(p1.x, serie.x_div),y:f(p1.y, serie.y_div)};
                     ppx2 = {x:g(p2.x, serie.x_div),y:f(p2.y, serie.y_div)};
                     if(gleft<ppx1.x&&ppx1.x<gright) {
@@ -547,6 +521,7 @@ function Graphic(master=null, series=[], w=760, h=560) {
                             }
                         }
                     }
+                    */
                 }
             }
             // == legenda ==

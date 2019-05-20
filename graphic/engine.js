@@ -94,7 +94,8 @@ function plotar() {
         compileFormula(diventry);
     });
     div.childNodes.forEach(function(diventry,index) {
-        series.push(new GraphicSerie(l01x(diventry,-1000,1000),1,1,'s',diventry.f.name,diventry.color));
+        if(diventry.childNodes[3].checked)
+            series.push(new GraphicSerie(l01x(diventry,-1000,1000),1,1,'s',diventry.f.name,diventry.color));
     });
     gr01x.series = series;
 }
@@ -144,6 +145,16 @@ function addEntry(value="") {
         parent.appendChild(self);
         return self;
     })(diventry);
+
+    var chk = (function(parent){
+        var self = document.createElement("input");
+        self.setAttribute("type","checkbox");
+        self.className = "checkbox";
+        self.checked = true;
+        self.onchange = plotar;
+        parent.appendChild(self);
+        return self;
+    })(diventry);
     
 }
 
@@ -184,12 +195,113 @@ function zoomNormal(){
     gr01x.zoomNormal();
 };
 
+var ZoomControl = function(parent, caption="zoom") {
+    var self = document.createElement("span");
+    var label = document.createElement("span");
+    var btndown = document.createElement("button");
+    var btnup = document.createElement("button");
+    var wheel = document.createElement("span");
+
+    self.className = "zoom-control";
+    label.className = "caption";
+    wheel.className = "wheel";
+
+    label.innerText = caption;
+    btndown.innerText = "-";
+    btnup.innerText   = "+";
+
+    for(var i = 0;i < 5;i++) {
+        var wtrace = document.createElement("span");
+        wtrace.className = "wheel-trace";
+        wheel.appendChild(wtrace);
+    }
+
+    self.onup = null;
+    self.ondown = null;
+
+    wheel.__msave = null;
+
+    wheel.onmousedown = function(e) {
+        this.__msave = e.pageX;
+    };
+
+    wheel.onmouseup = function(e) {
+        this.__msave = null;
+    };
+
+    wheel.onmousemove = function(e) {
+        if(e.buttons!=1) return;
+        var dx = e.pageX - this.__msave;
+        this.__msave = e.pageX;
+        e.deltaX = dx;
+        if(dx>0&&this.parentNode.onup) {
+            this.parentNode.onup(e);
+        }else if(dx<0&&this.parentNode.ondown) {
+            this.parentNode.ondown(e);
+        }
+    };
+
+    btnup.onclick = function(e) {
+        //if(e.buttons!=1) return;
+        e.deltaX = 1;
+        this.parentNode.onup&&this.parentNode.onup(e);
+    };
+
+    btndown.onclick = function(e) {
+        //if(e.buttons!=1) return;
+        e.deltaX = -1;
+        this.parentNode.ondown&&this.parentNode.ondown(e);
+    };
+
+    self.appendChild(label);
+    self.appendChild(btndown);
+    self.appendChild(wheel);
+    self.appendChild(btnup);
+
+    return self;
+};
+
+var Separator = function(){
+    var sep = document.createElement("span");
+    sep.className = "separator";
+    return sep;
+};
+
 window.onload = function() {
     addEntry("f(x) <- x²");
     addEntry("g(x) <- sen(f(x))");
+    var gtools = document.getElementById("gtools");
     var panel = document.getElementById("main-panel");
+
+    gtools.appendChild(new Separator());
+
+    gtools.appendChild((function(){
+        var zoom = new ZoomControl(null,"Zoom X");
+        zoom.onup = function(e) {
+            gr01x.zoomInX();
+        };
+        zoom.ondown = function(e) {
+            gr01x.zoomOutX();
+        };
+        return zoom;
+    })());
+
+    gtools.appendChild(new Separator());
+
+    gtools.appendChild((function(){
+        var zoom = new ZoomControl(null,"Zoom Y");
+        zoom.onup = function(e) {
+            gr01x.zoomInY();
+        };
+        zoom.ondown = function(e) {
+            gr01x.zoomOutY();
+        };
+        return zoom;
+    })());
+
+    gtools.appendChild(new Separator());
+
     gr01x = new Graphic(panel,[],document.body.offsetWidth - document.getElementById("panel-left").offsetWidth - 20,document.body.offsetHeight - document.getElementById("gtools").offsetHeight-20);
-    //gr01x = new Graphic(panel,[],960,580);
     
     gr01x.mdown = null;
     gr01x.msave = null;
