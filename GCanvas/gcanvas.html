@@ -1,0 +1,44 @@
+
+<html>
+    
+    <head>
+        <meta charset="utf-8"/>
+        <title>GCanvas</title>
+        <script src="gcanvas.js"></script>
+        <script>
+
+            var gcv = new GCanvas();
+            
+            gcv.style.width = "100px";
+            gcv.style.height = "100px";
+            gcv.style.border = "1px solid black";
+
+            function criarlinha() {               
+                gcv.createLine(0,0,200,200,{linewidth:2,tags:"line"});
+            }
+
+            function criarretangulo() {
+                gcv.createRectangle(10,10,10,10,{fillstyle:"#F00",linewidth:4,tags:"rect"});
+            }
+
+            window.onload = function () {
+                panel.appendChild(gcv);
+            }
+
+        </script>
+    </head>
+    
+    <body>
+        <h1>GCanvas</h1>
+        <div>
+            <button onclick="criarlinha()">Linha</button>
+            <button onclick="criarretangulo()">Retangulo</button>
+            <button onclick="gcv.deleteAll()">Limpar</button>
+            <button onclick="gcv.deleteFromTags('line')">Delete Linha</button>
+            <button onclick="gcv.deleteFromTags('rect')">Delete Retangulo</button>
+        </div>
+        <hr />
+        <div id="panel"></div>
+    </body>
+            
+</html>
