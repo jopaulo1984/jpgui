@@ -1,4 +1,7 @@
-var gr01x = null;
+var gr01x  =  null;
+var xmin   = -1000;
+var xmax   =  1000;
+var series =  [];
             
 var l01x = function(entry,s,e) {
     var arr = [];
@@ -84,20 +87,32 @@ function compileFormula(diventry) {
     }
     
 }
+
+function updatedSeries() {
+    series = [];
+    var div = document.getElementById("div-entrys");
+    if(div) {
+        div.childNodes.forEach(function(diventry,index) {
+            if(diventry.childNodes[3].checked)
+                series.push(new GraphicSerie(l01x(diventry,xmin, xmax),1,1,'s',diventry.f.name,diventry.color));
+        });
+    }
+    return series;
+}
+
+function getSeries() {
+    var div = document.getElementById("div-entrys");
+    if(div) {
+        div.childNodes.forEach(function(diventry,index) {
+            compileFormula(diventry);
+        });
+        series = updatedSeries();
+    }
+    return series;
+}
     
 function plotar() {
-    gr01x.series = [];
-    var div = document.getElementById("div-entrys");
-    if(!div) return;
-    var series = [];
-    div.childNodes.forEach(function(diventry,index) {
-        compileFormula(diventry);
-    });
-    div.childNodes.forEach(function(diventry,index) {
-        if(diventry.childNodes[3].checked)
-            series.push(new GraphicSerie(l01x(diventry,-1000,1000),1,1,'s',diventry.f.name,diventry.color));
-    });
-    gr01x.series = series;
+    gr01x.series = getSeries();
 }
 
 function addEntry(value="") {
@@ -118,7 +133,7 @@ function addEntry(value="") {
         return self;
     })(div);
     
-    var entry = (function(parent){
+    (function(parent){
         var self = document.createElement("input");
         self.className = "entry entry-component";
         self.value = value;
@@ -127,7 +142,7 @@ function addEntry(value="") {
         return self;
     })(diventry);
     
-    var btncolor = (function(parent){
+    (function(parent){
         var self = document.createElement("input");
         self.setAttribute("type", "color");
         self.className = "button button-color entry-component";
@@ -137,7 +152,7 @@ function addEntry(value="") {
         return self;
     })(diventry);
     
-    var btnrem = (function(parent){
+    (function(parent){
         var self = document.createElement("button");
         self.className = "button button-remove entry-component";
         self.innerText = "x";
@@ -146,7 +161,7 @@ function addEntry(value="") {
         return self;
     })(diventry);
 
-    var chk = (function(parent){
+    (function(parent){
         var self = document.createElement("input");
         self.setAttribute("type","checkbox");
         self.className = "checkbox";
@@ -183,17 +198,15 @@ function getRandomColor() {
     return "#"+tohex(r)+tohex(g)+tohex(b);
 }
 
-function zoomIn(){
-    gr01x.zoomIn();
-};
-
-function zoomOut(){
-    gr01x.zoomOut();
-};
-
 function zoomNormal(){
+    gr01x.series = [];
     gr01x.zoomNormal();
+    gr01x.series = updatedSeries();
 };
+
+function resetGraphic() {
+    gr01x.rstAxesPosition();
+}
 
 var ZoomControl = function(parent, caption="zoom") {
     var self = document.createElement("span");
@@ -268,8 +281,7 @@ var Separator = function(){
 };
 
 window.onload = function() {
-    addEntry("f(x) <- x²");
-    addEntry("g(x) <- sen(f(x))");
+    addEntry("V(x) <- sen(x)");
     var gtools = document.getElementById("gtools");
     var panel = document.getElementById("main-panel");
 
@@ -278,10 +290,14 @@ window.onload = function() {
     gtools.appendChild((function(){
         var zoom = new ZoomControl(null,"Zoom X");
         zoom.onup = function(e) {
-            gr01x.zoomInX();
+            gr01x.seires = [];
+            gr01x.scalex *= 2;
+            gr01x.scale = updatedSeries();
         };
         zoom.ondown = function(e) {
-            gr01x.zoomOutX();
+            gr01x.seires = [];
+            gr01x.scalex *= 0.5;
+            gr01x.scale = updatedSeries();
         };
         return zoom;
     })());
@@ -291,10 +307,14 @@ window.onload = function() {
     gtools.appendChild((function(){
         var zoom = new ZoomControl(null,"Zoom Y");
         zoom.onup = function(e) {
-            gr01x.zoomInY();
+            gr01x.seires = [];
+            gr01x.scaley *= 2;
+            gr01x.scale = updatedSeries();
         };
         zoom.ondown = function(e) {
-            gr01x.zoomOutY();
+            gr01x.seires = [];
+            gr01x.scaley *= 0.5;
+            gr01x.scale = updatedSeries();
         };
         return zoom;
     })());
@@ -320,27 +340,27 @@ window.onload = function() {
         if(evt.buttons==1) {            
             var dx = evt.pageX - this.msave.x;
             var dy = evt.pageY - this.msave.y;
-            //console.log("dx: "+dx+", dy: "+dy);
             this.move(dx, dy);
             this.msave = {x:evt.pageX,y:evt.pageY};
         }
     };
     
     gr01x.onwheel = function(evt) {
-        if(evt.deltaY<0) {            
-            this.zoomIn();
+        var scale = this.get_scale();
+        if(evt.deltaY<0) {
+            scale.sx *= 2;
+            scale.sy *= 2;
         }else if(evt.deltaY>0) {
-            this.zoomOut();
+            scale.sx *= 0.5;
+            scale.sy *= 0.5;
         }
-        /*if(evt.deltaX<0) {            
-            this.zoomInX();
-        }else if(evt.deltaX>0) {
-            this.zoomOutX();
-        }*/
+        this.set_scale(scale.sx,scale.sy);
     };
     
     plotar();
+
     document.body.onresize = function() {
         gr01x.set_size(document.body.offsetWidth - document.getElementById("panel-left").offsetWidth - 20,document.body.offsetHeight - document.getElementById("gtools").offsetHeight-20);
-    }
+    };
+
 }

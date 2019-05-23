@@ -11,15 +11,13 @@
     </head>
     <body>
         <div class="panel left-panel" id="panel-left">
-            <h3 class="title">Funções</h3>
-            <div class="toolbar">
-                <button onclick="plotar()">Plotar</button>
-            </div>
+            <h3 class="title">Entradas</h3>
             <div id="div-entrys"></div>
-            <button onclick="addEntry()">Adicionar</button>
+            <button class="button-add" onclick="addEntry()">+</button>
         </div>        
         <div class="panel fill-panel">
             <div class="toolbar" id="gtools">
+                <button onclick="resetGraphic()">Centralizar</button>
                 <button onclick="zoomNormal()">Zoom 1.0</button>
             </div>
             <div class="panel main-panel" id="main-panel"></div>

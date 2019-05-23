@@ -116,7 +116,7 @@ var GraphicLegendGroup = function(canvas, left=0, top=0) {
     this.update = function() {
         this.__legends.forEach(function(legend){
             legend.update();
-        });   
+        });
     }
 
     this.insert = function(label, color, text, font={name:'Courier New', size:11}) {
@@ -155,7 +155,7 @@ var GraphicSerie = function(points=[{x:0,y:0}],x_div=1,y_div=1,x_label='X',y_lab
 
 function Graphic(master=null, series=[], w=760, h=560) {
     
-    self = new GCanvas();
+    var self = new GCanvas();
 
     if (master) {
         master.appendChild(self);
@@ -168,6 +168,26 @@ function Graphic(master=null, series=[], w=760, h=560) {
     self.__divsizey = 60;
     self.__leg_group = new GraphicLegendGroup(self);
     self.__inst = -1;
+    self.__scalex = 1.0;
+    self.__scaley = 1.0;
+    
+    Object.defineProperty(self,'scalex',{
+        get(){return this.__scalex;},
+        set(value) {
+            if(this.__scalex==value) return;
+            this.__scalex = value;
+            this.__draw_all();
+        }
+    });
+    
+    Object.defineProperty(self,'scaley',{
+        get(){return this.__scaley;},
+        set(value) {
+            if(this.__scaley==value) return;
+            this.__scaley = value;
+            this.__draw_all();
+        }
+    });
     
     Object.defineProperty(self,'legendsgroup',{
         get(){return this.__leg_group;}
@@ -215,11 +235,20 @@ function Graphic(master=null, series=[], w=760, h=560) {
         get(){return this.__divsizey;}
     });
     
+    self.get_scale = function() {
+        return {sx:this.__scalex,sy:this.__scaley};
+    };
+    
+    self.set_scale = function(sx,sy) {
+        if(this.__scalex==sx&&this.__scaley==sy) return;
+        this.__scalex = sx;
+        this.__scaley = sy;
+        this.__draw_all();
+    };
+    
     self.set_size = function(w, h) {        
         if (w<480) w = 480;
         if (h<320) h = 320;
-        /*w = w - (w % this.__divsize);
-        h = h - (h % this.__divsize);*/
         this.width = w;
         this.height = h;
         this.__draw_all();
@@ -238,7 +267,15 @@ function Graphic(master=null, series=[], w=760, h=560) {
         this.__sdcolor = subdiv;
         this.__xycolor = axes;
         this.__draw_all();
-    }
+    };
+
+    self.__get_scaledx = function(value) {
+        return this.__scalex * value;
+    };
+
+    self.__get_scaledy = function(value) {
+        return this.__scaley * value;
+    };
         
     self.__draw_base = function() {
         /**desenha os objetos base do gráfico.**/
@@ -254,31 +291,36 @@ function Graphic(master=null, series=[], w=760, h=560) {
         var gbottom = h - 20;
         var gw = gright - gleft;
         var gh = gbottom - gtop;
+
+        var sdivx = this.__get_scaledx(this.divsizex);
+        var sdivy = this.__get_scaledy(this.divsizey);
         
-        var subdivwx = this.__divsizex / 2;
-        var subdivwy = this.__divsizey / 2;
+        var subdivwx = sdivx / 2;
+        var subdivwy = sdivy / 2;
         
-        //var f   = function(i, sub) {return Math.trunc(i / sub);}
         var f_0 = function(i, j) {return (j / 2) + i;}
         
-        var x_0 = gleft + f_0( this.x_0, gw /* subdivwx*/);
-        var y_0 = gtop  + f_0(-this.y_0, gh /* subdivwy*/);
+        var x_0 = gleft + f_0( this.__get_scaledx(this.x_0), gw);
+        var y_0 = gtop  + f_0(-this.__get_scaledy(this.y_0), gh);
         
-        var ndivx = gw / this.__divsizex;
-        var ndivy = gh / this.__divsizey;
+        var ndivx = gw / sdivx;
+        var ndivy = gh / sdivy;
         var xvalues = [];
         var yvalues = [];
 
         this.createRectangle(0,0,w,h,{strokecolor:this.__bg,fillcolor:'white',linewidth:0,tags:'base'});
         this.createRectangle(gleft,gtop,gw,gh,{fillcolor:this.__bg,strokecolor:this.__xycolor,linewidth:2,tags:'base'});
         
-        var getmin = function(x){
+        /*var getmin = function(x){
             x -= x % 3;
             return x > 0 ? x : 1
         };
         
-        var minvaluesx = getmin(Math.floor(60 / this.divsizex));
-        var minvaluesy = getmin(Math.floor(60 / this.divsizey));
+        var minvaluesx = getmin(Math.floor(60 / sdivx));
+        var minvaluesy = getmin(Math.floor(60 / sdivy));*/
+        
+        var minvaluesx = 60 / sdivx;
+        var minvaluesy = 60 / sdivy;
 
         var axelim = function(pos,min,max) {
             if(min<pos&&pos<max) return pos;
@@ -348,10 +390,11 @@ function Graphic(master=null, series=[], w=760, h=560) {
             }
         })(this);
         
-        /**inserindo linhas veritcais**/
+        /**inserindo linhas verticais**/
         (function(self) {
-            var minsubx = self.divsizex * minvaluesx;
-            var minsuby = self.divsizey * minvaluesy;
+            var minsubx = sdivx * minvaluesx;
+            var minsuby = sdivy * minvaluesy;
+            var ismin = function(i,minsub){return i % minsub == 0;};
             //inserindo as linhas verticais do x positivo:
             var x = 0;
             var j = 0;
@@ -363,7 +406,7 @@ function Graphic(master=null, series=[], w=760, h=560) {
                     self.createLine(cx, gtop+1, cx, gbottom-1, {strokestyle:self.__dcolor, tags:'base'});
                     self.createText(cx, ay, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});                    
                 }
-                j++;
+                j += minvaluesx;
                 x += minsubx;
             }
             
@@ -378,7 +421,7 @@ function Graphic(master=null, series=[], w=760, h=560) {
                     self.createLine(cx, gtop+1, cx, gbottom-1, {strokestyle:self.__dcolor, tags:'base'});
                     self.createText(cx, ay, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});
                 }
-                j--;
+                j -= minvaluesx;
                 x -= minsubx;
             }
             
@@ -394,7 +437,7 @@ function Graphic(master=null, series=[], w=760, h=560) {
                     self.createLine(gleft+1, cy, gright-1, cy, {strokestyle:self.__dcolor, tags:'base'});
                     self.createText(ax, cy, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});
                 }
-                j++;
+                j += minvaluesy;
                 y -= minsuby;
             }
             
@@ -409,7 +452,7 @@ function Graphic(master=null, series=[], w=760, h=560) {
                     self.createLine(gleft+1, cy, gright-1, cy, {strokestyle:self.__dcolor, tags:'base'});
                     self.createText(ax, cy, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});
                 }
-                j--;
+                j -= minvaluesy;
                 y += minsuby;
             }
         })(this);
@@ -439,19 +482,22 @@ function Graphic(master=null, series=[], w=760, h=560) {
         gbottom = h - 20
         gw = gright - gleft
         gh = gbottom - gtop
+
+        var sdivx = this.__get_scaledx(this.divsizex);
+        var sdivy = this.__get_scaledy(this.divsizey);
         
-        subdivwx = Math.floor(this.__divsizex / 2);
-        subdivwy = Math.floor(this.__divsizey / 2);
+        subdivwx = Math.floor(sdivx / 2);
+        subdivwy = Math.floor(sdivy / 2);
 
         f_0 = function(i, j) {return (j / 2) + i};
 
-        y_0 = gtop  + f_0(-this.y_0, gh /* subdivwy*/);
-        x_0 = gleft + f_0( this.x_0, gw /* subdivwx)*/);
+        x_0 = gleft + f_0( this.__get_scaledx(this.x_0), gw);
+        y_0 = gtop  + f_0(-this.__get_scaledy(this.y_0), gh);
 
         var self = this;
                 
-        f = function(value, y_div) {return y_0 - (self.__divsizey/y_div) * value}
-        g = function(value, x_div) {return x_0 + (self.__divsizex/x_div) * value}
+        f = function(value, y_div) {return y_0 - (sdivy/y_div) * value}
+        g = function(value, x_div) {return x_0 + (sdivx/x_div) * value}
 
         function get_limited_points(p1,p2) {
             function _f(i1,i2,l1,l2) {
@@ -540,36 +586,45 @@ function Graphic(master=null, series=[], w=760, h=560) {
     };
     
     self.zoomNormal = function() {
-        this.zoomNormalX();
-        this.zoomNormalY();
+        this.__scalex = 1.0;
+        this.__scaley = 1.0;
+        this.__draw_all();
     };
     
-    self.zoomInX = function() {
-        if(this.divsizex>1000) return;
-        this.divsizex += 10;
+    self.zoomInX = function(value=0.01) {
+        if(this.__scalex>100) return;
+        this.__scalex += value;
+        this.__draw_all();
     };
     
-    self.zoomOutX = function() {
-        if(this.divsizex<=10) return;
-        this.divsizex -= 10;
+    self.zoomOutX = function(value=0.01) {
+        if(this.__scalex<=0.01) return;
+        this.__scalex -= value;
+        if(this.__scalex<=0) this.__scalex = 0.01;
+        this.__draw_all();
     };
     
     self.zoomNormalX = function() {
-        this.divsizex = 60;
+        this.__scalex = 1.0;
+        this.__draw_all();
     };
     
-    self.zoomInY = function() {
-        if(this.divsizey>1000) return;
-        this.divsizey += 10;
+    self.zoomInY = function(value=0.01) {
+        if(this.__scaley>100) return;
+        this.__scaley += value;
+        this.__draw_all();
     };
     
-    self.zoomOutY = function() {
-        if(this.divsizey<=10) return;
-        this.divsizey -= 10;
+    self.zoomOutY = function(value=0.01) {
+        if(this.__scaley<=0.01) return;
+        this.__scaley -= value;
+        if(this.__scaley<=0) this.__scaley = 0.01;
+        this.__draw_all();
     };
     
     self.zoomNormalY = function() {
-        this.divsizey = 60;
+        this.__scaley = 1.0;
+        this.__draw_all();
     };
     
     self.moveLeft = function() {
@@ -589,8 +644,14 @@ function Graphic(master=null, series=[], w=760, h=560) {
     };
     
     self.move = function(dx, dy) {
-        this.__x_0 += dx;
-        this.__y_0 -= dy;
+        this.__x_0 += dx / this.__scalex;
+        this.__y_0 -= dy / this.__scaley;
+        this.__draw_all();
+    };
+
+    self.rstAxesPosition = function() {
+        this.__x_0 = 0;
+        this.__y_0 = 0;
         this.__draw_all();
     };
     
