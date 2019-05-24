@@ -311,16 +311,25 @@ function Graphic(master=null, series=[], w=760, h=560) {
         this.createRectangle(0,0,w,h,{strokecolor:this.__bg,fillcolor:'white',linewidth:0,tags:'base'});
         this.createRectangle(gleft,gtop,gw,gh,{fillcolor:this.__bg,strokecolor:this.__xycolor,linewidth:2,tags:'base'});
         
-        /*var getmin = function(x){
-            x -= x % 3;
-            return x > 0 ? x : 1
+        var getmin = function(x){
+            var a = 60 / x;
+            if(1>a&&a>=0.5) {
+                return 1;
+            }else if(0.5>a&&a>=0.25) {
+                return 0.5;
+            }else if(0.25>a&&a>=0.1) {
+                return 0.25;
+            }else if(0.1>a) {
+                return 0.1;
+            }
+            return Math.floor(a);
         };
         
-        var minvaluesx = getmin(Math.floor(60 / sdivx));
-        var minvaluesy = getmin(Math.floor(60 / sdivy));*/
+        var minvaluesx = getmin(sdivx);
+        var minvaluesy = getmin(sdivy);
         
-        var minvaluesx = 60 / sdivx;
-        var minvaluesy = 60 / sdivy;
+        /*var minvaluesx = 60 / sdivx;
+        var minvaluesy = 60 / sdivy;*/
 
         var axelim = function(pos,min,max) {
             if(min<pos&&pos<max) return pos;
@@ -555,19 +564,6 @@ function Graphic(master=null, series=[], w=760, h=560) {
                     if (lp.x1) {
                         self.createLine(lp.x1, lp.y1, lp.x2, lp.y2, {strokestyle:serie.color, linewidth:serie.width, tags:'series'});
                     }
-                    /*
-                    ppx1 = {x:g(p1.x, serie.x_div),y:f(p1.y, serie.y_div)};
-                    ppx2 = {x:g(p2.x, serie.x_div),y:f(p2.y, serie.y_div)};
-                    if(gleft<ppx1.x&&ppx1.x<gright) {
-                        if(gtop<ppx1.y&&ppx1.y<gbottom) {
-                            if(gleft<ppx2.x&&ppx2.x<gright) {
-                                if(gtop<ppx2.y&&ppx2.y<gbottom) {
-                                    self.createLine(ppx1.x, ppx1.y, ppx2.x, ppx2.y, {strokestyle:serie.color, linewidth:serie.width, tags:'series'});
-                                }
-                            }
-                        }
-                    }
-                    */
                 }
             }
             // == legenda ==

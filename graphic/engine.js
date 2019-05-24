@@ -1,7 +1,8 @@
 var gr01x  =  null;
 var xmin   = -1000;
 var xmax   =  1000;
-var series =  [];
+
+const SCALE_ = 1.1;
             
 var l01x = function(entry,s,e) {
     var arr = [];
@@ -88,8 +89,8 @@ function compileFormula(diventry) {
     
 }
 
-function updatedSeries() {
-    series = [];
+function updateSeries() {
+    var series = [];
     var div = document.getElementById("div-entrys");
     if(div) {
         div.childNodes.forEach(function(diventry,index) {
@@ -97,7 +98,7 @@ function updatedSeries() {
                 series.push(new GraphicSerie(l01x(diventry,xmin, xmax),1,1,'s',diventry.f.name,diventry.color));
         });
     }
-    return series;
+    gr01x.series = series;
 }
 
 function getSeries() {
@@ -106,13 +107,12 @@ function getSeries() {
         div.childNodes.forEach(function(diventry,index) {
             compileFormula(diventry);
         });
-        series = updatedSeries();
+        updateSeries();
     }
-    return series;
 }
     
 function plotar() {
-    gr01x.series = getSeries();
+    getSeries();
 }
 
 function addEntry(value="") {
@@ -199,9 +199,7 @@ function getRandomColor() {
 }
 
 function zoomNormal(){
-    gr01x.series = [];
     gr01x.zoomNormal();
-    gr01x.series = updatedSeries();
 };
 
 function resetGraphic() {
@@ -290,14 +288,10 @@ window.onload = function() {
     gtools.appendChild((function(){
         var zoom = new ZoomControl(null,"Zoom X");
         zoom.onup = function(e) {
-            gr01x.seires = [];
-            gr01x.scalex *= 2;
-            gr01x.scale = updatedSeries();
+            gr01x.scalex *= SCALE_;
         };
         zoom.ondown = function(e) {
-            gr01x.seires = [];
-            gr01x.scalex *= 0.5;
-            gr01x.scale = updatedSeries();
+            gr01x.scalex /= SCALE_;
         };
         return zoom;
     })());
@@ -307,14 +301,10 @@ window.onload = function() {
     gtools.appendChild((function(){
         var zoom = new ZoomControl(null,"Zoom Y");
         zoom.onup = function(e) {
-            gr01x.seires = [];
-            gr01x.scaley *= 2;
-            gr01x.scale = updatedSeries();
+            gr01x.scaley *= SCALE_;
         };
         zoom.ondown = function(e) {
-            gr01x.seires = [];
-            gr01x.scaley *= 0.5;
-            gr01x.scale = updatedSeries();
+            gr01x.scaley /= SCALE_;
         };
         return zoom;
     })());
@@ -348,11 +338,11 @@ window.onload = function() {
     gr01x.onwheel = function(evt) {
         var scale = this.get_scale();
         if(evt.deltaY<0) {
-            scale.sx *= 2;
-            scale.sy *= 2;
+            scale.sx *= SCALE_;
+            scale.sy *= SCALE_;
         }else if(evt.deltaY>0) {
-            scale.sx *= 0.5;
-            scale.sy *= 0.5;
+            scale.sx /= SCALE_;
+            scale.sy /= SCALE_;
         }
         this.set_scale(scale.sx,scale.sy);
     };
