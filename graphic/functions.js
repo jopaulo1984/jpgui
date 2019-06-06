@@ -13,7 +13,10 @@ var ObjectFunction = function(name,params,exps,pvalues=[]) {
             if(i > 0) pars += ",";
             pars += self.params[i];
         }
-        var fs = "self.func = function("+pars+"){return "+self.exps+"}";
-        eval(fs);
+        try {
+            eval("self.func = function("+pars+"){return "+self.exps+"}");
+        }catch(ex) {
+            eval("self.func = function("+pars+"){return null}");
+        }
     })(this);
 };

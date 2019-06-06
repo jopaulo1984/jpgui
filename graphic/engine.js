@@ -1,8 +1,9 @@
 var gr01x  =  null;
-var xmin   = -1000;
-var xmax   =  1000;
+var xmin   = -10000;
+var xmax   =  10000;
 
 const SCALE_ = 1.1;
+const COS_45 = Math.cos(3.14 / 4);
             
 var l01x = function(entry,s,e) {
     var arr = [];
@@ -20,72 +21,280 @@ function getPoint(entry,x) {
     return {x:x,y:y}
 }
 
-function compileFormula(diventry) {
-    function _comp(frm){
-        frm = frm.replace(/sen/g,"Math.sin");
-        frm = frm.replace(/cos/g,"Math.cos");
-        frm = frm.replace(/tan/g,"Math.tan");
-        frm = frm.replace(/²/g,"**2");
-        frm = frm.replace(/³/g,"**3");
-        frm = frm.replace(/\^/g,"**");
-        frm = frm.replace(/raiz/g,"Math.sqrt");
-        return frm;
+function _comp(frm){
+    frm = frm.replace(/\bsen\b/gi,"Math.sin");
+    frm = frm.replace(/\bcos\b/gi,"Math.cos");
+    frm = frm.replace(/\btan\b/gi,"Math.tan");
+    frm = frm.replace(/\basen\b/gi,"Math.asin");
+    frm = frm.replace(/\bacos\b/gi,"Math.acos");
+    frm = frm.replace(/\batan\b/gi,"Math.atan");
+    frm = frm.replace(/²/gi,"**2");
+    frm = frm.replace(/³/gi,"**3");
+    frm = frm.replace(/\^/gi,"**");
+    frm = frm.replace(/\braiz\b/gi,"Math.sqrt");
+    return frm;
+}
+
+function compileFormula2(code) {
+    var lex = new AnLex(code);
+    var estd = 0;
+    var tk = null;
+    var tmp = '';
+    var fname = '';
+    var fpars = [];
+    var ftype = 'func';
+    var i = 0;
+    var p = 0;
+    var vec = {x: null, y: null, x0: null, y0: null};
+    while(estd>-1&&i++<10000) {
+        if(estd==0) {
+            tk = lex.nextToken();
+            if(tk==null) {
+                return;
+            } else if(tk.type == TKID) {
+                tmp = tk.value;
+                estd = 1;
+            }
+        } else if(estd==1) {
+            tk = lex.nextToken();
+            if(tk.value=='('||tk.value=='='||tk.value==':') {
+                fname = tmp;
+                tmp = '';
+                if(tk.value=='(') {
+                    estd = 2;
+                    ftype = 'func';
+                } else if(tk.value=='=') {
+                    fpars.push('x');
+                    estd = 5;
+                    ftype = 'atrib';
+                } else {
+                    estd = 6;
+                    ftype = 'vec';
+                }
+            } else {
+                estd = -1;
+            }
+        } else if(estd==2) {
+            tk = lex.nextToken();
+            if(tk!=null&&(tk.value==')'||tk.value==',')) {
+                if(tmp=='') return {type: 'err', msg: "Erro de sintaxe: esperado parâmetro ou ')'."};
+                fpars.push(tmp);
+                tmp = '';
+                if(tk.value==')') estd = 3;
+            } else if(tk!=null&&tk.type==TKID) {
+                tmp = tk.value;
+            } else {
+                return {type: 'err', msg: "Erro de sintaxe: esperado parâmetro ou ')'."};
+            }
+        } else if(estd==3) {
+            tk = lex.nextToken();
+            if(tk.value=='<') {
+                estd = 4;
+            } else {
+                return {type: 'err', msg: "Erro de sintaxe: esperado '<-'."};
+            }
+        } else if(estd==4) {
+            tk = lex.nextToken();
+            if(tk.value=='-') {
+                estd = 5;
+            } else {
+                return {type: 'err', msg: "Erro de sintaxe: esperado '<-'."};
+            }
+        } else if(estd==5) {
+            tk = lex.nextToken();
+            if(tk==null) {
+                if(tmp=='') {
+                    return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
+                }
+                return {type: ftype, f: new ObjectFunction(fname,fpars,_comp(tmp))};
+            } else {
+                tmp += tk.value;
+            }
+        } else if(estd==6) {
+            tk = lex.nextToken();
+            if(tk!=null&&tk.value=='(') {
+                p = 1;
+                estd = 7;
+                tmp = '';
+            } else {
+                return {type: 'err', msg: "Erro de sintaxe: esperado '('."};
+            }
+        } else if(estd==7) {
+            tk = lex.nextToken();
+            if(tk==null) {
+                return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
+            }
+            if(tk.value==',') {
+                if(tmp=='') {
+                    return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
+                }
+                vec.x = new ObjectFunction(fname + "_x",['x'],_comp(tmp));
+                tmp = '';
+                estd = 8;
+            } else {
+                tmp += tk.value;
+            }
+        } else if(estd==8) {
+            tk = lex.nextToken();
+            if(tk==null) {
+                return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
+            }
+            if(tk.value==')'&&p==1) {
+                if(tmp=='') {
+                    return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
+                }
+                vec.y = new ObjectFunction(fname + "_y",['x'],_comp(tmp));
+                tmp = '';
+                estd = 9;            
+            } else {
+                tmp += tk.value;
+                if(tk.value=='(') {
+                    p++;
+                } else if(tk.value==')') {
+                    p--;
+                }
+            }
+        } else if(estd==9) {
+            tk = lex.nextToken();
+            if(tk==null) {
+                return {type: ftype, v: vec, f: new ObjectFunction(fname,['x'],_comp("{x:"+vec.x.exps+",y:"+vec.y.exps+"}"))};
+            } else if(tk.value=='[') {
+                p = 1;
+                tmp = '';
+                estd = 10;
+            } else {
+                return {type: 'err', msg: "Erro de sintaxe: token '"+ tk.value +"' inesperado."};
+            }
+        } else if(estd==10) {
+            tk = lex.nextToken();
+            if(tk==null) {
+                return {type: 'err', msg: "Erro de sintaxe: esperado um valor ou identificador."};
+            } 
+            if(tk.value==',') {
+                if(tmp=='') {
+                    return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
+                }
+                vec.x0 = new ObjectFunction(fname + "_x0",['x'],_comp(tmp));
+                tmp = '';
+                estd = 11;
+            } else {
+                tmp += tk.value;
+            }
+        } else if(estd==11) {
+            tk = lex.nextToken();
+            if(tk==null) {
+                return {type: 'err', msg: "Erro de sintaxe: esperado ','."};
+            } 
+            if(tk.value==']'&&p==1) {
+                if(tmp=='') {
+                    return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
+                }
+                vec.y0 = new ObjectFunction(fname + "_y0",['x'],_comp(tmp));
+                tmp = '';
+                estd = 12;            
+            } else {
+                tmp += tk.value;
+                if(tk.value=='[') {
+                    p++;
+                } else if(tk.value==']') {
+                    p--;
+                }
+            }
+        } else if(estd==12) {
+            tk = lex.nextToken();
+            if(tk==null) {
+                return {type: ftype, v: vec, f: new ObjectFunction(fname,['x'],_comp("{x:"+vec.x.exps+",y:"+vec.y.exps+",x0:"+vec.x0.exps+",y0:"+vec.y0.exps+"}"))};
+            } else {
+                return {type: 'err', msg: "Erro de sintaxe: token '"+ tk.value +"' inesperado."};
+            }
+        } else {
+            return {type: 'err', msg: "Erro de sintaxe."};
+            estd = -1;
+        }
     }
+}
+
+function compileFormula(diventry) {
+    
+    diventry.serie = null;
+    
     var entry = diventry.childNodes[0];                              
     var formula = entry.value;
-    var spl = formula.split("<-");
-    if(spl.length==1) {
-        var spl = _comp(formula).split("=");
-        if(spl.length==1) {
-            diventry.f = new ObjectFunction("...",["x"],spl[0]);
-        }else{
-            var fn = spl[0].trim();
-            var frm = spl[spl.length-1];
-            var v = eval(frm);
-            diventry.f = new ObjectFunction(fn,["x"],frm);
-            for(var i=0;i<spl.length-1;i++) {
-                window[fn] = v;
+
+    var a = compileFormula2(formula);
+    
+    try {
+        if(a==null) return;
+        
+        if(a.type=='err') {
+            alert(a.msg);
+            return;
+        }
+        
+        diventry.f = a.f;
+        diventry.type = a.type;
+        
+        if(a.type=='vec') {
+            window[a.f.name] = {x: a.v.x.call(), y: a.v.y.call()}; //, x0: a.v.x0.call(), y0: a.v.y0.call()};
+            var vec = window[a.f.name];
+            var pnt1 = {x:0,y:0};
+            if(a.v.x0!==null) {
+                pnt1.x = a.v.x0.call();
+                pnt1.y = a.v.y0.call();
+            }
+            var pnt2 = {x: vec.x + pnt1.x, y: vec.y + pnt1.y};;
+            var ca = pnt2.x - pnt1.x;
+            var co = pnt2.y - pnt1.y;
+            var mod = Math.sqrt(ca**2 + co**2);
+            var tan = co / ca;
+            
+            var a90 = 3.14 / 2
+            var a__ = 3.14 / 8;
+            var teta0 = Math.acos(ca/mod);
+            
+            if(co<0) {
+                teta0 = 2 * 3.14 - teta0;
+            }
+            
+            var teta1 = teta0 + 3.14 - a__;
+            var teta2 = teta0 + 3.14 + a__;
+            
+            var ptu1 = {x: pnt1.x + 0.2 * Math.cos(teta1), y: pnt1.y + 0.2 * Math.sin(teta1)};
+            var ptu2 = {x: pnt1.x + 0.2 * Math.cos(teta2), y: pnt1.y + 0.2 * Math.sin(teta2)};
+            
+            var pnt3 = {
+                x: ptu1.x + ca,
+                y: ptu1.y + co
+            };
+            
+            var pnt4 = {
+                x:  ptu2.x + ca,
+                y:  ptu2.y + co
+            };
+            
+            serie = [
+                pnt1,
+                pnt2,
+                pnt3,
+                pnt4,
+                pnt2
+            ];
+            
+            diventry.serie = new GraphicSerie(serie,1,1,'s',diventry.f.name,diventry.color);
+            
+        } else if(a.type=='func'||a.type=='atrib'){
+            diventry.xmin = xmin;
+            diventry.xmax = xmax;
+            diventry.serie = new GraphicSerie(l01x(diventry,diventry.xmin, diventry.xmax),1,1,'s',diventry.f.name,diventry.color);
+            if(a.type=='func') {
+                window[a.f.name] = a.f.func;
+            } else {
+                window[a.f.name] = eval(a.f.exps);
             }
         }
-    }else if(spl.length>1) {
-        var fn = "";
-        var p = "";
-        var pars = [];
-        var estd = 0;
-        for(var i = 0;i < spl[0].length;i++){
-            if(estd==0) {
-                if(spl[0][i]=='('){
-                    estd=1;
-                }else if(spl[0][i]!=' '&&spl[0][i]!='\t'){
-                    fn+=spl[0][i];
-                }
-            }else if(estd==1) {
-                if(spl[0][i]==','||spl[0][i]==')') {
-                    if(p=="") {
-                        console.log("Esperado um parâmetro.");
-                        return;
-                    }
-                    pars.push(p);
-                    p = "";
-                    if(spl[0][i]==')') {
-                        estd=2;
-                    }
-                }else if(spl[0][i]!=' '&&spl[0][i]!='\t'){
-                    p += spl[0][i];
-                }
-            }else if(estd==2) {
-                if(spl[0][i]!=' '&&spl[0][i]!='\t') {
-                    console.log("Caracter '"+spl[0][i]+"' inesperado.");
-                    return;
-                }
-            }
-                    
-        }
-        diventry.f = new ObjectFunction(fn,pars,_comp(spl[1]));
-        
-        window[fn] = diventry.f.func;
-        
-    }
+    }catch(ex){}
+    
+    return;
     
 }
 
@@ -94,8 +303,10 @@ function updateSeries() {
     var div = document.getElementById("div-entrys");
     if(div) {
         div.childNodes.forEach(function(diventry,index) {
-            if(diventry.childNodes[3].checked)
-                series.push(new GraphicSerie(l01x(diventry,xmin, xmax),1,1,'s',diventry.f.name,diventry.color));
+            if(diventry.childNodes[3].checked) {
+                //series.push(new GraphicSerie(l01x(diventry,diventry.xmin, diventry.xmax),1,1,'s',diventry.f.name,diventry.color));
+                series.push(diventry.serie);
+            }
         });
     }
     gr01x.series = series;
@@ -115,7 +326,7 @@ function plotar() {
     getSeries();
 }
 
-function addEntry(value="") {
+function addEntry(value="",color=getRandomColor(),en=true) {
     
     var div = document.getElementById("div-entrys");
     if(!div) return;
@@ -146,7 +357,7 @@ function addEntry(value="") {
         var self = document.createElement("input");
         self.setAttribute("type", "color");
         self.className = "button button-color entry-component";
-        self.value = getRandomColor();
+        self.value = color;
         self.onchange = plotar;
         parent.appendChild(self);
         return self;
@@ -165,11 +376,13 @@ function addEntry(value="") {
         var self = document.createElement("input");
         self.setAttribute("type","checkbox");
         self.className = "checkbox";
-        self.checked = true;
+        self.checked = en;
         self.onchange = plotar;
         parent.appendChild(self);
         return self;
     })(diventry);
+    
+    return diventry;
     
 }
 
@@ -279,7 +492,11 @@ var Separator = function(){
 };
 
 window.onload = function() {
-    addEntry("V(x) <- sen(x)");
+    addEntry("f(x) <- x²",color=getRandomColor(),en=true);
+    addEntry("Df(x) <- 2 * x",color=getRandomColor(),en=false);
+    addEntry("k = 0.5",color=getRandomColor(),en=false);
+    addEntry("teta = atan(Df(k))",color=getRandomColor(),en=false);
+    addEntry("A: (cos(teta),sen(teta))[k,f(k)]",color=getRandomColor(),en=true);
     var gtools = document.getElementById("gtools");
     var panel = document.getElementById("main-panel");
 
