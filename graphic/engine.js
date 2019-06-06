@@ -242,50 +242,12 @@ function compileFormula(diventry) {
                 pnt1.x = a.v.x0.call();
                 pnt1.y = a.v.y0.call();
             }
-            var pnt2 = {x: vec.x + pnt1.x, y: vec.y + pnt1.y};;
-            var ca = pnt2.x - pnt1.x;
-            var co = pnt2.y - pnt1.y;
-            var mod = Math.sqrt(ca**2 + co**2);
-            var tan = co / ca;
-            
-            var a90 = 3.14 / 2
-            var a__ = 3.14 / 8;
-            var teta0 = Math.acos(ca/mod);
-            
-            if(co<0) {
-                teta0 = 2 * 3.14 - teta0;
-            }
-            
-            var teta1 = teta0 + 3.14 - a__;
-            var teta2 = teta0 + 3.14 + a__;
-            
-            var ptu1 = {x: pnt1.x + 0.2 * Math.cos(teta1), y: pnt1.y + 0.2 * Math.sin(teta1)};
-            var ptu2 = {x: pnt1.x + 0.2 * Math.cos(teta2), y: pnt1.y + 0.2 * Math.sin(teta2)};
-            
-            var pnt3 = {
-                x: ptu1.x + ca,
-                y: ptu1.y + co
-            };
-            
-            var pnt4 = {
-                x:  ptu2.x + ca,
-                y:  ptu2.y + co
-            };
-            
-            serie = [
-                pnt1,
-                pnt2,
-                pnt3,
-                pnt4,
-                pnt2
-            ];
-            
-            diventry.serie = new GraphicSerie(serie,1,1,'s',diventry.f.name,diventry.color);
-            
+            var pnt2 = {x: vec.x + pnt1.x, y: vec.y + pnt1.y};            
+            diventry.serie = new GraphicSerie(new Vetor(null,[pnt1,pnt2],diventry.color),1,1,'s',diventry.f.name);            
         } else if(a.type=='func'||a.type=='atrib'){
             diventry.xmin = xmin;
             diventry.xmax = xmax;
-            diventry.serie = new GraphicSerie(l01x(diventry,diventry.xmin, diventry.xmax),1,1,'s',diventry.f.name,diventry.color);
+            diventry.serie = new GraphicSerie(new PoliLinha(null,l01x(diventry,diventry.xmin, diventry.xmax),diventry.color),1,1,'s',diventry.f.name);
             if(a.type=='func') {
                 window[a.f.name] = a.f.func;
             } else {
