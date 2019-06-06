@@ -14,7 +14,7 @@ O `graphics` é um módulo que contém componentes para visualização gráfica 
 
 */
 
-var GraphicLegend = function (group,left=0,top=0,label='legend',lcolor='black',ltext='',lfont={name:'Courier New', size:11}) {
+var Graphic  Legend = function (group,left=0,top=0,label='legend',lcolor='black',ltext='',lfont={name:'Courier New', size:11}) {
     this.__group        = group;
     this.__offsetLeft   = left;
     this.__offsetTop    = top;
