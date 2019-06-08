@@ -250,11 +250,15 @@ function createSerie(diventry, compiled) {
             vec.offX = vec.x + vec.x0;
             vec.offY = vec.y + vec.y0;
             var pnt2 = {x: vec.x + pnt1.x, y: vec.y + pnt1.y};
-            diventry.serie = new GraphicSerie(new Vetor(null,[pnt1,pnt2],diventry.color),1,1,'s',diventry.f.name);            
+            if(diventry.en) {
+                diventry.serie = new GraphicSerie(new Vetor(null,[pnt1,pnt2],diventry.color),1,1,'s',diventry.f.name);
+            }
         } else if(a.type=='func'||a.type=='atrib'){
             diventry.xmin = xmin;
             diventry.xmax = xmax;
-            diventry.serie = new GraphicSerie(new PoliLinha(null,l01x(diventry,diventry.xmin, diventry.xmax),diventry.color),1,1,'s',diventry.f.name);
+            if(diventry.en) {
+                diventry.serie = new GraphicSerie(new PoliLinha(null,l01x(diventry,diventry.xmin, diventry.xmax),diventry.color),1,1,'s',diventry.f.name);
+            }
             if(a.type=='func') {
                 window[a.f.name] = a.f.func;
             } else {
@@ -287,8 +291,9 @@ function getSeries() {
         for(var i=0;i<div.childNodes.length;i++) {
             var diventry = div.childNodes[i];
             diventry.setMsg("");
-            var a = compileCode(diventry.code);
+            var a = compileCode(diventry.code);            
             compiled.push(a);
+            if(!a) continue;
             if(a.type=='err') {
                 diventry.setMsg("<font color='red'>"+a.msg+"</font>");
                 return;
@@ -302,6 +307,7 @@ function getSeries() {
             for(var i=0;i<div.childNodes.length;i++) {
                 var diventry = div.childNodes[i];
                 var comp = compiled[i];
+                if(!comp) continue;
                 if(comp.type!=='err') {
                     var _ok = createSerie(diventry, comp);
                     ok = ok && _ok;
@@ -373,7 +379,7 @@ function addEntry(value="",color=getRandomColor(),en=true) {
         var self = document.createElement("button");
         self.className = "button button-remove entry-component";
         self.innerText = "x";
-        self.onclick = function(){remEntry(this.parentNode)};
+        self.onclick = function(){remEntry(this.parentNode.parentNode)};
         parent.appendChild(self);
         return self;
     })(div1);
