@@ -1,3 +1,10 @@
+/*
+ * 
+ * 
+ * 
+ * 
+ */
+
 var gr01x  =  null;
 var xmin   = -10000;
 var xmax   =  10000;
@@ -35,7 +42,7 @@ function _comp(frm){
     return frm;
 }
 
-function compileFormula2(code) {
+function compileCode(code) {
     var lex = new AnLex(code);
     var estd = 0;
     var tk = null;
@@ -183,7 +190,7 @@ function compileFormula2(code) {
         } else if(estd==11) {
             tk = lex.nextToken();
             if(tk==null) {
-                return {type: 'err', msg: "Erro de sintaxe: esperado ','."};
+                return {type: 'err', msg: "Erro de sintaxe: esperado ']'."};
             } 
             if(tk.value==']'&&p==1) {
                 if(tmp=='') {
@@ -214,87 +221,49 @@ function compileFormula2(code) {
     }
 }
 
-function compileFormula(diventry) {
+function createSerie(diventry, compiled) {
     
     diventry.serie = null;
-    
-    var entry = diventry.childNodes[0];                              
-    var formula = entry.value;
 
-    var a = compileFormula2(formula);
+    var a = compiled;
+    
+    diventry.f = a.f;
+    diventry.type = a.type;
     
     try {
-        if(a==null) return;
-        
-        if(a.type=='err') {
-            alert(a.msg);
-            return;
-        }
-        
-        diventry.f = a.f;
-        diventry.type = a.type;
-        
         if(a.type=='vec') {
-            window[a.f.name] = {x: a.v.x.call(), y: a.v.y.call()}; //, x0: a.v.x0.call(), y0: a.v.y0.call()};
+            var x_ = a.v.x.call();
+            var y_ = a.v.y.call();
+            window[a.f.name] = {x: x_, y: y_, x0: 0, y0: 0, offX: x_, offY: y_};
             var vec = window[a.f.name];
             var pnt1 = {x:0,y:0};
-            if(a.v.x0!==null) {
-                pnt1.x = a.v.x0.call();
-                pnt1.y = a.v.y0.call();
+            if(a.v.x0!==null) {                
+                try {
+                    pnt1.x = a.v.x0.call();
+                    pnt1.y = a.v.y0.call();
+                }catch(ex){
+                    pnt1 = {x:0,y:0};
+                }
             }
-            var pnt2 = {x: vec.x + pnt1.x, y: vec.y + pnt1.y};;
-            var ca = pnt2.x - pnt1.x;
-            var co = pnt2.y - pnt1.y;
-            var mod = Math.sqrt(ca**2 + co**2);
-            var tan = co / ca;
-            
-            var a90 = 3.14 / 2
-            var a__ = 3.14 / 8;
-            var teta0 = Math.acos(ca/mod);
-            
-            if(co<0) {
-                teta0 = 2 * 3.14 - teta0;
-            }
-            
-            var teta1 = teta0 + 3.14 - a__;
-            var teta2 = teta0 + 3.14 + a__;
-            
-            var ptu1 = {x: pnt1.x + 0.2 * Math.cos(teta1), y: pnt1.y + 0.2 * Math.sin(teta1)};
-            var ptu2 = {x: pnt1.x + 0.2 * Math.cos(teta2), y: pnt1.y + 0.2 * Math.sin(teta2)};
-            
-            var pnt3 = {
-                x: ptu1.x + ca,
-                y: ptu1.y + co
-            };
-            
-            var pnt4 = {
-                x:  ptu2.x + ca,
-                y:  ptu2.y + co
-            };
-            
-            serie = [
-                pnt1,
-                pnt2,
-                pnt3,
-                pnt4,
-                pnt2
-            ];
-            
-            diventry.serie = new GraphicSerie(serie,1,1,'s',diventry.f.name,diventry.color);
-            
+            vec.x0 = pnt1.x;
+            vec.y0 = pnt1.y;
+            vec.offX = vec.x + vec.x0;
+            vec.offY = vec.y + vec.y0;
+            var pnt2 = {x: vec.x + pnt1.x, y: vec.y + pnt1.y};
+            diventry.serie = new GraphicSerie(new Vetor(null,[pnt1,pnt2],diventry.color),1,1,'s',diventry.f.name);            
         } else if(a.type=='func'||a.type=='atrib'){
             diventry.xmin = xmin;
             diventry.xmax = xmax;
-            diventry.serie = new GraphicSerie(l01x(diventry,diventry.xmin, diventry.xmax),1,1,'s',diventry.f.name,diventry.color);
+            diventry.serie = new GraphicSerie(new PoliLinha(null,l01x(diventry,diventry.xmin, diventry.xmax),diventry.color),1,1,'s',diventry.f.name);
             if(a.type=='func') {
                 window[a.f.name] = a.f.func;
             } else {
                 window[a.f.name] = eval(a.f.exps);
             }
         }
-    }catch(ex){}
+    }catch{return false}
     
-    return;
+    return true;
     
 }
 
@@ -303,8 +272,7 @@ function updateSeries() {
     var div = document.getElementById("div-entrys");
     if(div) {
         div.childNodes.forEach(function(diventry,index) {
-            if(diventry.childNodes[3].checked) {
-                //series.push(new GraphicSerie(l01x(diventry,diventry.xmin, diventry.xmax),1,1,'s',diventry.f.name,diventry.color));
+            if(diventry.en) {
                 series.push(diventry.serie);
             }
         });
@@ -314,10 +282,32 @@ function updateSeries() {
 
 function getSeries() {
     var div = document.getElementById("div-entrys");
+    var compiled = [];
     if(div) {
-        div.childNodes.forEach(function(diventry,index) {
-            compileFormula(diventry);
-        });
+        for(var i=0;i<div.childNodes.length;i++) {
+            var diventry = div.childNodes[i];
+            diventry.setMsg("");
+            var a = compileCode(diventry.code);
+            compiled.push(a);
+            if(a.type=='err') {
+                diventry.setMsg("<font color='red'>"+a.msg+"</font>");
+                return;
+            }
+            delete window[a.f.name];
+        }        
+        var ok = false;
+        var __j__ = 0;
+        while(!ok&&__j__++<div.childNodes.length) {
+            ok = true;
+            for(var i=0;i<div.childNodes.length;i++) {
+                var diventry = div.childNodes[i];
+                var comp = compiled[i];
+                if(comp.type!=='err') {
+                    var _ok = createSerie(diventry, comp);
+                    ok = ok && _ok;
+                }
+            }
+        }        
         updateSeries();
     }
 }
@@ -337,12 +327,28 @@ function addEntry(value="",color=getRandomColor(),en=true) {
         self.className = "div-entry";
         Object.defineProperty(self,"color",{
             get() {
-                return this.childNodes[1].value;
+                return this.childNodes[0].childNodes[1].value;
+            }
+        });
+        Object.defineProperty(self,"code",{
+            get() {
+                return this.childNodes[0].childNodes[0].value;
+            }
+        });
+        Object.defineProperty(self,"en",{
+            get() {
+                return this.childNodes[0].childNodes[3].checked;
             }
         });
         parent.appendChild(self);
         return self;
     })(div);
+    
+    var div1 = (function(parent){
+        var self = document.createElement("div");
+        parent.appendChild(self);
+        return self;
+    })(diventry);
     
     (function(parent){
         var self = document.createElement("input");
@@ -351,7 +357,7 @@ function addEntry(value="",color=getRandomColor(),en=true) {
         self.onchange = plotar;
         parent.appendChild(self);
         return self;
-    })(diventry);
+    })(div1);
     
     (function(parent){
         var self = document.createElement("input");
@@ -361,7 +367,7 @@ function addEntry(value="",color=getRandomColor(),en=true) {
         self.onchange = plotar;
         parent.appendChild(self);
         return self;
-    })(diventry);
+    })(div1);
     
     (function(parent){
         var self = document.createElement("button");
@@ -370,7 +376,7 @@ function addEntry(value="",color=getRandomColor(),en=true) {
         self.onclick = function(){remEntry(this.parentNode)};
         parent.appendChild(self);
         return self;
-    })(diventry);
+    })(div1);
 
     (function(parent){
         var self = document.createElement("input");
@@ -378,6 +384,17 @@ function addEntry(value="",color=getRandomColor(),en=true) {
         self.className = "checkbox";
         self.checked = en;
         self.onchange = plotar;
+        parent.appendChild(self);
+        return self;
+    })(div1);
+    
+    (function(parent){
+        var self = document.createElement("div");
+        self.className = "div-msg";
+        parent.msg = self;
+        parent.setMsg = function(value) {
+            this.msg.innerHTML = value;
+        }
         parent.appendChild(self);
         return self;
     })(diventry);
@@ -494,9 +511,9 @@ var Separator = function(){
 window.onload = function() {
     addEntry("f(x) <- x²",color=getRandomColor(),en=true);
     addEntry("Df(x) <- 2 * x",color=getRandomColor(),en=false);
-    addEntry("k = 0.5",color=getRandomColor(),en=false);
+    addEntry("A:(cos(teta),sen(teta))[k,f(k)]",color=getRandomColor(),en=true);
     addEntry("teta = atan(Df(k))",color=getRandomColor(),en=false);
-    addEntry("A: (cos(teta),sen(teta))[k,f(k)]",color=getRandomColor(),en=true);
+    addEntry("k = -1.5",color=getRandomColor(),en=false);
     var gtools = document.getElementById("gtools");
     var panel = document.getElementById("main-panel");
 

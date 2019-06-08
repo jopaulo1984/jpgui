@@ -1,5 +1,3 @@
-
-
 /*
 +----------------------------------------+
 | graphics v0.1                          |
@@ -143,14 +141,115 @@ var GraphicLegendGroup = function(canvas, left=0, top=0) {
 
 }
 
-var GraphicSerie = function(points=[{x:0,y:0}],x_div=1,y_div=1,x_label='X',y_label='Y',color='white',width=2) {
-    this.points = points;
+var GraphicSerie = function(grobject,x_div=1,y_div=1,x_label='X',y_label='Y') {
+    this.object = grobject;
+    this.object.serie = this;
+    //this.points = points;
     this.x_div = x_div;
     this.y_div = y_div;
     this.x_label = x_label;
     this.y_label = y_label;
-    this.color = color;
-    this.width = width;
+    //this.color = color;
+    //this.width = width;
+}
+
+var GrObject = function(serie=null,points=[],color='black',width=2) {
+
+    this.serie = serie;
+    this.__points = points;
+    this.__color = color;
+    this.__width = width;
+
+    this.draw = function(cv,xfunc,yfunc,limits) {};
+
+    this.get_limited_points = function(p1,p2,gbounds) {
+        function _f(i1,i2,l1,l2) {
+            var d1 = i1 - l1;   // i1 = 20 L1 = 21
+            var d2 = i2 - l1;   // 
+            if (d1 <  0 && d2 <  0) return {i1:null,i2:null};
+            d1 = l2 - i1;
+            d2 = l2 - i2;
+            if (d1 <  0 && d2 <  0) return {i1:null,i2:null};
+            return {i1:i1,i2:i2};
+        }
+        pp = _f(p1.x,p2.x,gbounds.left+1,gbounds.right-1);
+        p1.x = pp.i1;
+        p2.x = pp.i2;
+        if (p1.x === null) return {x1:null,y1:null,x2:null,y2:null};
+        pp = _f(p1.y,p2.y,gbounds.top+1,gbounds.bottom-1);
+        p1.y = pp.i1;
+        p2.y = pp.i2;
+        if (p1.y === null) return {x1:null,y1:null,x2:null,y2:null};
+        return {x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y};
+    }
+
+}
+
+function PoliLinha(serie=null,points=[],color='black',width=2) {
+
+    var self = new GrObject(serie,points,color,width);
+
+    self.draw = function(cv,xfunc,yfunc,limits) {
+        for(var i=1;i<this.__points.length;i++) {
+            p1 = this.__points[i-1];
+            p2 = this.__points[i];
+            lp = this.get_limited_points({x:xfunc(p1.x, this.serie.x_div),y:yfunc(p1.y, this.serie.y_div)}, {x:xfunc(p2.x, this.serie.x_div),y:yfunc(p2.y, this.serie.y_div)},limits);
+            if (lp.x1) {
+                cv.createLine(lp.x1, lp.y1, lp.x2, lp.y2, {strokestyle:this.__color, linewidth:this.__width, tags:'series'});
+            }
+        }
+    };
+
+    return self;
+
+}
+
+function Vetor(serie=null,points=[],color='black',width=2) {
+
+    var self = new GrObject(serie,points,color,width);
+
+    self.draw = function(cv,xfunc,yfunc,limits) {        
+        var p1 = this.__points[0];  //base
+        var p2 = this.__points[1];  //vetor
+
+        p1 = {x:xfunc(p1.x, this.serie.x_div),y:yfunc(p1.y, this.serie.y_div)};
+        p2 = {x:xfunc(p2.x, this.serie.x_div),y:yfunc(p2.y, this.serie.y_div)};
+
+        var ca = p2.x - p1.x;
+        var co = p2.y - p1.y;
+        var mod = Math.sqrt(ca**2 + co**2);
+
+        var a__ = 3.14 / 8;
+        var teta0 = Math.acos(ca/mod);
+        
+        if(co<0) {
+            teta0 = 2 * 3.14 - teta0;
+        }
+        
+        var teta1 = teta0 + 3.14 - a__;
+        var teta2 = teta0 + 3.14 + a__;
+        
+        var ptu1 = {x: p1.x + 10 * Math.cos(teta1), y: p1.y + 10 * Math.sin(teta1)};
+        var ptu2 = {x: p1.x + 10 * Math.cos(teta2), y: p1.y + 10 * Math.sin(teta2)};
+        
+        var p3 = {
+            x: ptu1.x + ca,
+            y: ptu1.y + co
+        };
+        
+        var p4 = {
+            x:  ptu2.x + ca,
+            y:  ptu2.y + co
+        };
+
+        cv.createLine(p1.x,p1.y,p2.x,p2.y,{strokestyle:this.__color, linewidth:this.__width, tags:'series'});
+        cv.createLine(p2.x,p2.y,p3.x,p3.y,{strokestyle:this.__color, linewidth:this.__width, tags:'series'});
+        cv.createLine(p2.x,p2.y,p4.x,p4.y,{strokestyle:this.__color, linewidth:this.__width, tags:'series'});
+        
+    };
+
+    return self;
+
 }
 
 function Graphic(master=null, series=[], w=760, h=560) {
@@ -531,30 +630,9 @@ function Graphic(master=null, series=[], w=760, h=560) {
         y_0 = gbounds.top  + f_0(-this.__get_scaledy(this.y_0), gh);
 
         var self = this;
-                
-        f = function(value, y_div) {return y_0 - (sdivy/y_div) * value}
-        g = function(value, x_div) {return x_0 + (sdivx/x_div) * value}
-
-        function get_limited_points(p1,p2) {
-            function _f(i1,i2,l1,l2) {
-                var d1 = i1 - l1;   // i1 = 20 L1 = 21
-                var d2 = i2 - l1;   // 
-                if (d1 <  0 && d2 <  0) return {i1:null,i2:null};
-                d1 = l2 - i1;
-                d2 = l2 - i2;
-                if (d1 <  0 && d2 <  0) return {i1:null,i2:null};
-                return {i1:i1,i2:i2};
-            }
-            pp = _f(p1.x,p2.x,gbounds.left+1,gbounds.right-1);
-            p1.x = pp.i1;
-            p2.x = pp.i2;
-            if (p1.x === null) return {x1:null,y1:null,x2:null,y2:null};
-            pp = _f(p1.y,p2.y,gbounds.top+1,gbounds.bottom-1);
-            p1.y = pp.i1;
-            p2.y = pp.i2;
-            if (p1.y === null) return {x1:null,y1:null,x2:null,y2:null};
-            return {x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y};
-        }
+        
+        xf = function(value, x_div) {return x_0 + (sdivx/x_div) * value}
+        yf = function(value, y_div) {return y_0 - (sdivy/y_div) * value}
 
         var xl0 = w-180;
         var xl1 = xl0+5;
@@ -577,17 +655,9 @@ function Graphic(master=null, series=[], w=760, h=560) {
         this.__leg_group.remove_all();
         
         this.series.forEach(function(serie) {
-            if(serie===null) return;
+            if(!serie) return;
             if (!(serie.y_div==0 || serie.x_div==0)) {
-                // == curva ==
-                for(var i=1;i<serie.points.length;i++) {
-                    p1 = serie.points[i-1];
-                    p2 = serie.points[i];
-                    lp = get_limited_points({x:g(p1.x, serie.x_div),y:f(p1.y, serie.y_div)}, {x:g(p2.x, serie.x_div),y:f(p2.y, serie.y_div)});
-                    if (lp.x1) {
-                        self.createLine(lp.x1, lp.y1, lp.x2, lp.y2, {strokestyle:serie.color, linewidth:serie.width, tags:'series'});
-                    }
-                }
+                serie.object.draw(self,xf,yf,gbounds);
             }
             if(self.enabledLegends) {
                 // == legenda ==
@@ -599,7 +669,7 @@ function Graphic(master=null, series=[], w=760, h=560) {
         this.createRectangle(w-18,1,w-18,h-2,{fillstyle:'white',strokestyle:'white',tags:'series'});
         this.createRectangle(1,h-18,w-2,h-2,{fillstyle:'white',strokestyle:'white',tags:'series'});
         this.createRectangle(1,1,18,h-2,{fillstyle:'white',strokestyle:'white',tags:'series'});
-    }
+    };
     
     self.zoomIn = function() {
         this.zoomInX();
