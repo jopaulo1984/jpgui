@@ -189,15 +189,20 @@ function PoliLinha(serie=null,points=[],color='black',width=2) {
 
     var self = new GrObject(serie,points,color,width);
 
-    self.draw = function(cv,xfunc,yfunc,limits) {
-        for(var i=1;i<this.__points.length;i++) {
-            p1 = this.__points[i-1];
-            p2 = this.__points[i];
-            lp = this.get_limited_points({x:xfunc(p1.x, this.serie.x_div),y:yfunc(p1.y, this.serie.y_div)}, {x:xfunc(p2.x, this.serie.x_div),y:yfunc(p2.y, this.serie.y_div)},limits);
-            if (lp.x1) {
-                cv.createLine(lp.x1, lp.y1, lp.x2, lp.y2, {strokestyle:this.__color, linewidth:this.__width, tags:'series'});
+    self.draw = function(cv,xfunc,yfunc,limits) {        
+        
+        var pnts = (function(self) {
+            //convertendo os pontos em pixels
+            var result = [];
+            for(var i=0;i<self.__points.length;i++) {
+                p1 = self.__points[i];
+                result.push({x:xfunc(p1.x, self.serie.x_div),y:yfunc(p1.y, self.serie.y_div)});
             }
-        }
+            return result;
+        })(this);
+        
+        cv.createPolyLine(pnts, {strokestyle:this.__color, linewidth:this.__width, tags:'series'});
+        
     };
 
     return self;
@@ -406,7 +411,6 @@ function Graphic(master=null, series=[], w=760, h=560) {
     self.__draw_base = function() {
         /**desenha os objetos base do grÃ¡fico.**/
         this.deleteFromTags('base');
-        this.deleteFromTags('series');
 
         w = this.width;
         h = this.height;
@@ -455,9 +459,6 @@ function Graphic(master=null, series=[], w=760, h=560) {
         
         var minvaluesx = getmin(sdivx);
         var minvaluesy = getmin(sdivy);
-        
-        /*var minvaluesx = 60 / sdivx;
-        var minvaluesy = 60 / sdivy;*/
 
         var axelim = function(pos,min,max) {
             if(min<pos&&pos<max) return pos;
@@ -468,7 +469,7 @@ function Graphic(master=null, series=[], w=760, h=560) {
         var ax = axelim(x_0,gbounds.left,gbounds.right);
         var ay = axelim(y_0,gbounds.top,gbounds.bottom);
         
-        /**inserindo linhas veritcais das subdivisÃµes**/
+        /**inserindo linhas verticais das subdivisoes**/
         (function(self) {
             var minsubx = subdivwx * minvaluesx / 2;
             var minsuby = subdivwy * minvaluesy / 2;
@@ -498,7 +499,7 @@ function Graphic(master=null, series=[], w=760, h=560) {
                 x -= minsubx;
             }
             
-            /**inserindo linhas horizontais das subdivisÃµes**/
+            /**inserindo linhas horizontais das subdivisoes**/
             //inserindo as linhas horizontais do y positivo:
             var y = 0;
             var j = 0;
@@ -541,7 +542,7 @@ function Graphic(master=null, series=[], w=760, h=560) {
                 if (cx>gbounds.right) {break;}
                 if(x!=0&&gbounds.left<cx) {
                     self.createLine(cx, gbounds.top+1, cx, gbounds.bottom-1, {strokestyle:self.__dcolor, tags:'base'});
-                    self.createText(cx, ay, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});                    
+                    //self.createText(cx, ay, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});                    
                 }
                 j += minvaluesx;
                 x += minsubx;
@@ -556,7 +557,7 @@ function Graphic(master=null, series=[], w=760, h=560) {
                 if (cx < gbounds.left) {break;}
                 if(x!=0&&cx<gbounds.right) {
                     self.createLine(cx, gbounds.top+1, cx, gbounds.bottom-1, {strokestyle:self.__dcolor, tags:'base'});
-                    self.createText(cx, ay, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});
+                    //self.createText(cx, ay, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});
                 }
                 j -= minvaluesx;
                 x -= minsubx;
@@ -572,7 +573,7 @@ function Graphic(master=null, series=[], w=760, h=560) {
                 if (cy < gbounds.top) {break;}
                 if(y!=0&&cy<gbounds.bottom) {
                     self.createLine(gbounds.left+1, cy, gbounds.right-1, cy, {strokestyle:self.__dcolor, tags:'base'});
-                    self.createText(ax, cy, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});
+                    //self.createText(ax, cy, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});
                 }
                 j += minvaluesy;
                 y -= minsuby;
@@ -587,18 +588,147 @@ function Graphic(master=null, series=[], w=760, h=560) {
                 if (cy > gbounds.bottom) {break;}
                 if(y!=0&&gbounds.top<cy) {
                     self.createLine(gbounds.left+1, cy, gbounds.right-1, cy, {strokestyle:self.__dcolor, tags:'base'});
-                    self.createText(ax, cy, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});
+                    //self.createText(ax, cy, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'base'});
                 }
                 j -= minvaluesy;
                 y += minsuby;
             }
         })(this);
 
-        this.createLine(gbounds.left, ay, gbounds.right, ay, {strokestyle:self.__xycolor,tags:'base',linewidth:1});
-        this.createLine(ax, gbounds.top, ax, gbounds.bottom, {strokestyle:self.__xycolor,tags:'base',linewidth:1});
+        /*this.createLine(gbounds.left, ay, gbounds.right, ay, {strokestyle:self.__xycolor,tags:'base',linewidth:1});
+        this.createLine(ax, gbounds.top, ax, gbounds.bottom, {strokestyle:self.__xycolor,tags:'base',linewidth:1});*/
         
         this.__leg_group.set_anchor(gbounds.right + 10, 20, false);
 
+    };
+    
+    self.__draw_axes = function() {
+        this.deleteFromTags('axes');
+
+        w = this.width;
+        h = this.height;
+        
+        var gbounds = this.get_gridview_bounds();
+        
+        var gw = gbounds.right - gbounds.left;
+        var gh = gbounds.bottom - gbounds.top;
+
+        var sdivx = this.__get_scaledx(this.divsizex);
+        var sdivy = this.__get_scaledy(this.divsizey);
+        
+        var subdivwx = sdivx / 2;
+        var subdivwy = sdivy / 2;
+        
+        var f_0 = function(i, j) {return (j / 2) + i;}
+        
+        var x_0 = gbounds.left + f_0( this.__get_scaledx(this.x_0), gw);
+        var y_0 = gbounds.top  + f_0(-this.__get_scaledy(this.y_0), gh);
+        
+        var ndivx = gw / sdivx;
+        var ndivy = gh / sdivy;
+        var xvalues = [];
+        var yvalues = [];
+
+        var getmin = function(value){
+            var x = 60 / value;
+            if(1>x&&x>=0.5) {
+                return 1;
+            }else if(0.5>x&&x>=0.25) {
+                return 0.5;
+            }else if(0.25>x&&x>=0.1) {
+                return 0.25;
+            }else if(0.1>x&&x>=0.05) {
+                return 0.1;
+            }else if(0.05>x&&x>=0.01) {
+                return 0.05;
+            }else if(0.01>x) {
+                return 0.01;
+            }
+            return Math.floor(x); // > 0 ? x : 1
+        };
+        
+        var minvaluesx = getmin(sdivx);
+        var minvaluesy = getmin(sdivy);
+
+        var axelim = function(pos,min,max) {
+            if(min<pos&&pos<max) return pos;
+            if(pos<min) return min;
+            if(pos>max) return max;
+        }
+
+        var ax = axelim(x_0,gbounds.left,gbounds.right);
+        var ay = axelim(y_0,gbounds.top,gbounds.bottom);
+        
+        /**inserindo linhas verticais**/
+        (function(self) {
+            var minsubx = sdivx * minvaluesx;
+            var minsuby = sdivy * minvaluesy;
+            var ismin = function(i,minsub){return i % minsub == 0;};
+            //inserindo as linhas verticais do x positivo:
+            var x = 0;
+            var j = 0;
+            var i = 0;
+            while (i++ < 1000) {
+                var cx = x_0 + x; // + 2;
+                if (cx>gbounds.right) {break;}
+                if(x!=0&&gbounds.left<cx) {
+                    //self.createLine(cx, gbounds.top+1, cx, gbounds.bottom-1, {strokestyle:self.__dcolor, tags:'axes'});
+                    self.createText(cx, ay, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'axes'});                    
+                }
+                j += minvaluesx;
+                x += minsubx;
+            }
+            
+            //inserindo as linhas verticais do x negativo:
+            var x =  0;
+            var j =  0;
+            var i =  0;
+            while (i++ < 1000) {
+                var cx = x_0 + x; // + 2;
+                if (cx < gbounds.left) {break;}
+                if(x!=0&&cx<gbounds.right) {
+                    //self.createLine(cx, gbounds.top+1, cx, gbounds.bottom-1, {strokestyle:self.__dcolor, tags:'axes'});
+                    self.createText(cx, ay, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'axes'});
+                }
+                j -= minvaluesx;
+                x -= minsubx;
+            }
+            
+            /**inserindo linhas horizontais**/
+            //inserindo as linhas horizontais do y positivo:
+            var y = 0;
+            var j = 0;
+            var i = 0;
+            while (i++ < 1000) {
+                var cy = y_0 + y;
+                if (cy < gbounds.top) {break;}
+                if(y!=0&&cy<gbounds.bottom) {
+                    //self.createLine(gbounds.left+1, cy, gbounds.right-1, cy, {strokestyle:self.__dcolor, tags:'axes'});
+                    self.createText(ax, cy, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'axes'});
+                }
+                j += minvaluesy;
+                y -= minsuby;
+            }
+            
+            //inserindo as linhas horizontais do y negativo:
+            var y =  0;
+            var j =  0;
+            var i =  0;
+            while (i++ < 1000) {
+                var cy = y_0 + y;
+                if (cy > gbounds.bottom) {break;}
+                if(y!=0&&gbounds.top<cy) {
+                    //self.createLine(gbounds.left+1, cy, gbounds.right-1, cy, {strokestyle:self.__dcolor, tags:'axes'});
+                    self.createText(ax, cy, {text:j.toFixed(2), font:{name:'Courier New', size:12}, tags:'axes'});
+                }
+                j -= minvaluesy;
+                y += minsuby;
+            }
+        })(this);
+
+        this.createLine(gbounds.left, ay, gbounds.right, ay, {strokestyle:self.__xycolor,tags:'axes',linewidth:1});
+        this.createLine(ax, gbounds.top, ax, gbounds.bottom, {strokestyle:self.__xycolor,tags:'axes',linewidth:1});
+        
     };
     
     self.__draw_all = function() {
@@ -606,7 +736,7 @@ function Graphic(master=null, series=[], w=760, h=560) {
         this.draw();
     };
 
-    self.draw = function() {
+    self.__draw = function() {
 
         this.deleteFromTags("series");
 
@@ -669,6 +799,11 @@ function Graphic(master=null, series=[], w=760, h=560) {
         this.createRectangle(w-18,1,w-18,h-2,{fillstyle:'white',strokestyle:'white',tags:'series'});
         this.createRectangle(1,h-18,w-2,h-2,{fillstyle:'white',strokestyle:'white',tags:'series'});
         this.createRectangle(1,1,18,h-2,{fillstyle:'white',strokestyle:'white',tags:'series'});
+    };
+    
+    self.draw = function() {
+        this.__draw();
+        this.__draw_axes();
     };
     
     self.zoomIn = function() {

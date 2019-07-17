@@ -4,6 +4,17 @@
  * 
  * 
  */
+ 
+var GLOBALS_ = {
+    cos: Math.cos,
+    sen: Math.sin,
+    pi: Math.pi,
+    PI: Math.pi,
+    tan: Math.tan,
+    atan: Math.atan,
+    acos: Math.acos,
+    asen: Math.asin
+};
 
 var gr01x  =  null;
 var xmin   = -10000;
@@ -29,151 +40,88 @@ function getPoint(entry,x) {
 }
 
 function _comp(frm){
-    frm = frm.replace(/\bsen\b/gi,"Math.sin");
+    /*frm = frm.replace(/\bsen\b/gi,"Math.sin");
     frm = frm.replace(/\bcos\b/gi,"Math.cos");
     frm = frm.replace(/\btan\b/gi,"Math.tan");
     frm = frm.replace(/\basen\b/gi,"Math.asin");
     frm = frm.replace(/\bacos\b/gi,"Math.acos");
-    frm = frm.replace(/\batan\b/gi,"Math.atan");
+    frm = frm.replace(/\batan\b/gi,"Math.atan");*/
     frm = frm.replace(/²/gi,"**2");
     frm = frm.replace(/³/gi,"**3");
     frm = frm.replace(/\^/gi,"**");
-    frm = frm.replace(/\braiz\b/gi,"Math.sqrt");
+    //frm = frm.replace(/\braiz\b/gi,"Math.sqrt");
     return frm;
 }
 
 function compileCode(code) {
-    var lex = new AnLex(code);
-    var estd = 0;
-    var tk = null;
-    var tmp = '';
-    var fname = '';
-    var fpars = [];
-    var ftype = 'func';
-    var i = 0;
-    var p = 0;
-    var vec = {x: null, y: null, x0: null, y0: null};
-    while(estd>-1&&i++<10000) {
-        if(estd==0) {
-            tk = lex.nextToken();
+    
+    var exists = function(arr, item) {
+        for(var i=0;i<arr.length;i++) {
+            if(arr[i]==item){
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    function validatk(tk) {
+        if(tk.type==TKID) {
+            if(exists(Object.keys(GLOBALS_), tk.value)) {
+                return "GLOBALS_." + tk.value;
+            } else {
+                return null;
+            }
+        }
+        return tk.value;
+    }
+    
+    function estd13(lex, fname, vec) {
+        GLOBALS_[fname] = vec;
+        return {type: 'vec', v: vec, f: new ObjectFunction(fname,['x'],_comp("GLOBALS_." + fname))};
+    }
+    
+    function estd12(lex, fname, vec) {
+        var tk = lex.nextToken();
+        if(tk==null) {
+            return estd13(lex, fname, vec);
+        } else {
+            return {type: 'err', msg: "Erro de sintaxe: token '"+ tk.value +"' inesperado."};
+        }
+    }
+    
+    function estd11(lex, fname, vec) {
+        var p = 0;
+        var tmp = "";
+        while(true) {
+            var tk = lex.nextToken();
             if(tk==null) {
-                return;
-            } else if(tk.type == TKID) {
-                tmp = tk.value;
-                estd = 1;
-            }
-        } else if(estd==1) {
-            tk = lex.nextToken();
-            if(tk.value=='('||tk.value=='='||tk.value==':') {
-                fname = tmp;
-                tmp = '';
-                if(tk.value=='(') {
-                    estd = 2;
-                    ftype = 'func';
-                } else if(tk.value=='=') {
-                    fpars.push('x');
-                    estd = 5;
-                    ftype = 'atrib';
-                } else {
-                    estd = 6;
-                    ftype = 'vec';
-                }
-            } else {
-                estd = -1;
-            }
-        } else if(estd==2) {
-            tk = lex.nextToken();
-            if(tk!=null&&(tk.value==')'||tk.value==',')) {
-                if(tmp=='') return {type: 'err', msg: "Erro de sintaxe: esperado parâmetro ou ')'."};
-                fpars.push(tmp);
-                tmp = '';
-                if(tk.value==')') estd = 3;
-            } else if(tk!=null&&tk.type==TKID) {
-                tmp = tk.value;
-            } else {
-                return {type: 'err', msg: "Erro de sintaxe: esperado parâmetro ou ')'."};
-            }
-        } else if(estd==3) {
-            tk = lex.nextToken();
-            if(tk.value=='<') {
-                estd = 4;
-            } else {
-                return {type: 'err', msg: "Erro de sintaxe: esperado '<-'."};
-            }
-        } else if(estd==4) {
-            tk = lex.nextToken();
-            if(tk.value=='-') {
-                estd = 5;
-            } else {
-                return {type: 'err', msg: "Erro de sintaxe: esperado '<-'."};
-            }
-        } else if(estd==5) {
-            tk = lex.nextToken();
-            if(tk==null) {
+                return {type: 'err', msg: "Erro de sintaxe: esperado ']'."};
+            } 
+            if(tk.value==']'&&p==0) {
                 if(tmp=='') {
                     return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
                 }
-                return {type: ftype, f: new ObjectFunction(fname,fpars,_comp(tmp))};
+                vec.y0 = (new ObjectFunction(fname + "_y0",['x'],_comp(tmp))).call();
+                return estd12(lex, fname, vec);
             } else {
-                tmp += tk.value;
-            }
-        } else if(estd==6) {
-            tk = lex.nextToken();
-            if(tk!=null&&tk.value=='(') {
-                p = 1;
-                estd = 7;
-                tmp = '';
-            } else {
-                return {type: 'err', msg: "Erro de sintaxe: esperado '('."};
-            }
-        } else if(estd==7) {
-            tk = lex.nextToken();
-            if(tk==null) {
-                return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
-            }
-            if(tk.value==',') {
-                if(tmp=='') {
-                    return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
+                var v = validatk(tk);
+                if (tk.value!=='x'&&v===null) {
+                    return {type: 'err', msg: "O identificador '" + tk.value + "' não foi encontrado."};
                 }
-                vec.x = new ObjectFunction(fname + "_x",['x'],_comp(tmp));
-                tmp = '';
-                estd = 8;
-            } else {
-                tmp += tk.value;
-            }
-        } else if(estd==8) {
-            tk = lex.nextToken();
-            if(tk==null) {
-                return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
-            }
-            if(tk.value==')'&&p==1) {
-                if(tmp=='') {
-                    return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
-                }
-                vec.y = new ObjectFunction(fname + "_y",['x'],_comp(tmp));
-                tmp = '';
-                estd = 9;            
-            } else {
-                tmp += tk.value;
-                if(tk.value=='(') {
+                tmp += v; 
+                if(tk.value=='[') {
                     p++;
-                } else if(tk.value==')') {
+                } else if(tk.value==']') {
                     p--;
                 }
             }
-        } else if(estd==9) {
-            tk = lex.nextToken();
-            if(tk==null) {
-                return {type: ftype, v: vec, f: new ObjectFunction(fname,['x'],_comp("{x:"+vec.x.exps+",y:"+vec.y.exps+"}"))};
-            } else if(tk.value=='[') {
-                p = 1;
-                tmp = '';
-                estd = 10;
-            } else {
-                return {type: 'err', msg: "Erro de sintaxe: token '"+ tk.value +"' inesperado."};
-            }
-        } else if(estd==10) {
-            tk = lex.nextToken();
+        }
+    }    
+    
+    function estd10(lex, fname, vec) {
+        var tmp = "";
+        while(true) {
+            var tk = lex.nextToken(false);
             if(tk==null) {
                 return {type: 'err', msg: "Erro de sintaxe: esperado um valor ou identificador."};
             } 
@@ -181,44 +129,220 @@ function compileCode(code) {
                 if(tmp=='') {
                     return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
                 }
-                vec.x0 = new ObjectFunction(fname + "_x0",['x'],_comp(tmp));
-                tmp = '';
-                estd = 11;
+                vec.x0 = (new ObjectFunction(fname + "_x0",['x'],_comp(tmp))).call();
+                return estd11(lex, fname, vec);
             } else {
-                tmp += tk.value;
+                var v = validatk(tk);
+                if (tk.value!=='x'&&v===null) {
+                    return {type: 'err', msg: "O identificador '" + tk.value + "' não foi encontrado."};
+                }
+                tmp += v; 
             }
-        } else if(estd==11) {
-            tk = lex.nextToken();
+        }
+    }
+    
+    function estd9(lex, fname, vec) {
+        var tk = lex.nextToken();
+        if(tk==null) {
+            vec.x0 = 0;
+            vec.y0 = 0;
+            return estd13(lex, fname, vec);
+        } else if(tk.value=='[') {
+            return estd10(lex, fname, vec);
+        } else {
+            return {type: 'err', msg: "Erro de sintaxe: token '"+ tk.value +"' inesperado."};
+        }
+    }
+    
+    function estd8(lex, fname, vec) {
+        var p = 0;
+        var tmp = "";
+        while(true) {
+            var tk = lex.nextToken();
             if(tk==null) {
-                return {type: 'err', msg: "Erro de sintaxe: esperado ']'."};
-            } 
-            if(tk.value==']'&&p==1) {
+                return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
+            }
+            if(tk.value==')'&&p==0) {
                 if(tmp=='') {
                     return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
                 }
-                vec.y0 = new ObjectFunction(fname + "_y0",['x'],_comp(tmp));
-                tmp = '';
-                estd = 12;            
+                vec.y = (new ObjectFunction(fname + "_y",['x'],_comp(tmp))).call();
+                return estd9(lex, fname, vec);
             } else {
-                tmp += tk.value;
-                if(tk.value=='[') {
+                var v = validatk(tk);
+                if (tk.value!=='x'&&v===null) {
+                    return {type: 'err', msg: "O identificador '" + tk.value + "' não foi encontrado."};
+                }
+                tmp += v; 
+                if(tk.value=='(') {
                     p++;
-                } else if(tk.value==']') {
+                } else if(tk.value==')') {
                     p--;
                 }
             }
-        } else if(estd==12) {
-            tk = lex.nextToken();
+        }
+    }    
+    
+    function estd7(lex, fname, vec) {
+        var tmp = "";
+        while(true) {
+            var tk = lex.nextToken(false);
             if(tk==null) {
-                return {type: ftype, v: vec, f: new ObjectFunction(fname,['x'],_comp("{x:"+vec.x.exps+",y:"+vec.y.exps+",x0:"+vec.x0.exps+",y0:"+vec.y0.exps+"}"))};
-            } else {
-                return {type: 'err', msg: "Erro de sintaxe: token '"+ tk.value +"' inesperado."};
+                return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
             }
-        } else {
-            return {type: 'err', msg: "Erro de sintaxe."};
-            estd = -1;
+            if(tk.value==',') {
+                if(tmp=='') {
+                    return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
+                }
+                vec.x = (new ObjectFunction(fname + "_x",['x'],_comp(tmp))).call();
+                return estd8(lex, fname, vec);
+            } else {
+                var v = validatk(tk);
+                if (tk.value!=='x'&&v===null) {
+                    return {type: 'err', msg: "O identificador '" + tk.value + "' não foi encontrado."};
+                }
+                tmp += v;                
+            }
         }
     }
+    
+    function estd6(lex, fname) {
+        var tk = lex.nextToken();
+        if(tk!=null&&tk.value=='(') {
+            return estd7(lex, fname, {
+                x: 0, 
+                y: 0,
+                x0: 0, 
+                y0: 0,
+                offX: function(){return this.x + this.x0},
+                offY: function(){return this.y + this.y0}
+            });
+        } else {
+            return {type: 'err', msg: "Erro de sintaxe: esperado '('."};
+        }
+    }
+    
+    function estd5_1(lex, fname, ftype) {
+        var tmp = '';
+        while(true) {
+            var tk = lex.nextToken(false);
+            if(tk==null) {
+                if(tmp=='') {
+                    return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
+                }
+                try {
+                    saida = {type: ftype, f: new ObjectFunction(fname,[],_comp(tmp))};
+                    GLOBALS_[fname] = saida.f.call();
+                    return saida
+                } catch(e) {
+                    return {type: 'err', msg: "Erro ao atribuir valor para '" + fname + "'."};
+                }
+            } else {
+                var v = validatk(tk);
+                if (v===null) {
+                    return {type: 'err', msg: "O identificador '" + tk.value + "' não foi encontrado."};
+                }
+                tmp += v;
+            }
+        }
+    }
+    
+    function estd5(lex, fname, ftype, fpars) {
+        var tmp = '';
+        while(true) {
+            var tk = lex.nextToken(false);
+            if(tk==null) {
+                if(tmp=='') {
+                    return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
+                }
+                saida = {type: ftype, f: new ObjectFunction(fname,fpars,_comp(tmp))};
+                GLOBALS_[fname] = saida.f.func;
+                return saida
+            } else {
+                if(!exists(fpars,tk.value)) {
+                    var v = validatk(tk);
+                    if (!exists(fpars,tk.value)&&v===null) {
+                        return {type: 'err', msg: "O identificador '" + tk.value + "' não foi encontrado."};
+                    }
+                    tmp += v;
+                } else {
+                    tmp += tk.value;
+                }
+            }
+        }
+    }
+    
+    function estd4(lex, fname, ftype, fpars) {
+        var tk = lex.nextToken();
+        if(tk.value=='-') {
+            return estd5(lex, fname, ftype, fpars);
+        } else {
+            return {type: 'err', msg: "Erro de sintaxe: esperado '<-'."};
+        }
+    }
+    
+    function estd3(lex, fname, ftype, fpars) {
+        var tk = lex.nextToken();
+        if(tk.value=='<') {
+            return estd4(lex, fname, ftype, fpars);
+        } else {
+            return {type: 'err', msg: "Erro de sintaxe: esperado '<-'."};
+        }
+    }
+    
+    function estd2(lex, fname, ftype) {
+        var tmp = "";
+        var fpars = [];
+        while(true) {
+            var tk = lex.nextToken();
+            if(tk!=null&&(tk.value==')'||tk.value==',')) {
+                if(tmp=='') return {type: 'err', msg: "Erro de sintaxe: esperado parâmetro ou ')'."};
+                fpars.push(tmp);
+                if(tk.value==')') {
+                    return estd3(lex, fname, ftype, fpars);
+                } else {
+                    tmp = '';
+                }
+            } else if(tk!=null&&tk.type==TKID) {
+                tmp = tk.value;
+            } else {
+                return {type: 'err', msg: "Erro de sintaxe: esperado parâmetro ou ')'."};
+            }
+        }
+    }    
+    
+    function estd1(lex, fname) {
+        var tk = lex.nextToken();
+        if(tk.value=='('||tk.value=='='||tk.value==':') {
+            if(tk.value=='(') {
+                return estd2(lex, fname, 'func');
+            } else if(tk.value=='=') {
+                return estd5_1(lex, fname, 'atrib');
+            } else {
+                return estd6(lex, fname);
+            }
+        } else {
+            return;
+        }
+    }
+    
+    function estd0() {
+        var lex = new AnLex(code);
+        var tk = lex.nextToken();
+        if(tk==null) {
+            return;
+        } else if(tk.type == TKID) {
+            return estd1(lex, tk.value);
+        } else {
+            return {type: 'err', msg: "Erro de sintaxe: esperada uma expressão válida."};
+        }
+    }
+    
+    return estd0();
+    
+    //*********************************//
+    
+    
 }
 
 function createSerie(diventry, compiled) {
@@ -232,12 +356,9 @@ function createSerie(diventry, compiled) {
     
     try {
         if(a.type=='vec') {
-            var x_ = a.v.x.call();
-            var y_ = a.v.y.call();
-            window[a.f.name] = {x: x_, y: y_, x0: 0, y0: 0, offX: x_, offY: y_};
-            var vec = window[a.f.name];
-            var pnt1 = {x:0,y:0};
-            if(a.v.x0!==null) {                
+            var vec = GLOBALS_[a.f.name];
+            var pnt1 = {x:vec.x0, y:vec.y0};            
+            /*if(a.v.x0!==null) {                
                 try {
                     pnt1.x = a.v.x0.call();
                     pnt1.y = a.v.y0.call();
@@ -248,8 +369,8 @@ function createSerie(diventry, compiled) {
             vec.x0 = pnt1.x;
             vec.y0 = pnt1.y;
             vec.offX = vec.x + vec.x0;
-            vec.offY = vec.y + vec.y0;
-            var pnt2 = {x: vec.x + pnt1.x, y: vec.y + pnt1.y};
+            vec.offY = vec.y + vec.y0;*/
+            var pnt2 = {x: vec.offX(), y: vec.offY()};
             if(diventry.en) {
                 diventry.serie = new GraphicSerie(new Vetor(null,[pnt1,pnt2],diventry.color),1,1,'s',diventry.f.name);
             }
@@ -259,13 +380,16 @@ function createSerie(diventry, compiled) {
             if(diventry.en) {
                 diventry.serie = new GraphicSerie(new PoliLinha(null,l01x(diventry,diventry.xmin, diventry.xmax),diventry.color),1,1,'s',diventry.f.name);
             }
-            if(a.type=='func') {
-                window[a.f.name] = a.f.func;
+            /*if(a.type=='func') {
+                //GLOBALS_[a.f.name] = a.f.func;
             } else {
-                window[a.f.name] = eval(a.f.exps);
-            }
+                //GLOBALS_[a.f.name] = eval(a.f.exps);
+            }*/
         }
-    }catch{return false}
+    }catch(e){
+        //console.log(e.message);
+        return false;
+    }
     
     return true;
     
@@ -298,11 +422,13 @@ function getSeries() {
                 diventry.setMsg("<font color='red'>"+a.msg+"</font>");
                 return;
             }
-            delete window[a.f.name];
+        /*try{
+                delete GLOBALS_[a.f.name];
+            }catch(e){};*/
         }        
         var ok = false;
         var __j__ = 0;
-        while(!ok&&__j__++<div.childNodes.length) {
+        while(__j__++<1/*!ok&&__j__++<div.childNodes.length*/) {
             ok = true;
             for(var i=0;i<div.childNodes.length;i++) {
                 var diventry = div.childNodes[i];
@@ -413,6 +539,7 @@ function remEntry(diventry) {
     var div = document.getElementById("div-entrys");
     if(!div) return;
     try{
+        delete GLOBALS_[diventry.f.name];
         div.removeChild(diventry);
     }catch(ex){}
     if(div.childNodes.length===0) addEntry();
@@ -517,9 +644,10 @@ var Separator = function(){
 window.onload = function() {
     addEntry("f(x) <- x²",color=getRandomColor(),en=true);
     addEntry("Df(x) <- 2 * x",color=getRandomColor(),en=false);
-    addEntry("A:(cos(teta),sen(teta))[k,f(k)]",color=getRandomColor(),en=true);
-    addEntry("teta = atan(Df(k))",color=getRandomColor(),en=false);
     addEntry("k = -1.5",color=getRandomColor(),en=false);
+    addEntry("teta = atan(Df(k))",color=getRandomColor(),en=false);
+    addEntry("A:(cos(teta),sen(teta))[k,f(k)]",color=getRandomColor(),en=true);
+    //addEntry("A:(2,3)[1,2]",color=getRandomColor(),en=true);
     var gtools = document.getElementById("gtools");
     var panel = document.getElementById("main-panel");
 

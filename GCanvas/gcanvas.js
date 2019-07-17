@@ -74,6 +74,54 @@ function GCanvas(width=480, height=320) {
         this.redraw();
     };
     
+    self.createPolyLine = function(points,configs={strokestyle:"black",linewidth:2,tags:""}) {
+        var pl = {
+            points: points,
+            draw: function(ctx) {
+                if(!this.points) return;
+                if(this.points.length===0) return;
+                ctx.beginPath();
+                ctx.lineWidth = this.linewidth;
+                ctx.strokeStyle = this.strokestyle;
+                ctx.moveTo(this.points[0].x, this.points[0].y);
+                for(var i=1;i<this.points.length;i++) {
+                    ctx.lineTo(this.points[i].x, this.points[i].y);
+                }
+                for(i=0;i<2;i++) { ctx.stroke(); }
+            },
+            translate: function(dx, dy) {
+                if(!this.points) return;
+                for(var i=0;i<this.points.length;i++) {
+                    this.points[i].x += dx;
+                    this.points[i].y += dy;
+                }
+            },
+            bounds: function() {
+                if(!this.points) return {x1:0,x2:0,y1:0,y2:0};
+                var p1 = this.points[0];
+                if(this.points.length===0) {
+                    return {
+                        x1:p1.x,
+                        x2:p1.x,
+                        y1:p1.y,
+                        y2:p1.y
+                    };
+                }
+                var p2 = this.points[this.points.length-1];
+                return {
+                    x1: p1.x,
+                    x2: p2.x,
+                    y1: p1.y,
+                    y2: p2.y
+                };
+            }
+        };
+        Object.setPrototypeOf(pl, GObject(configs));
+        this.gobjects.push(pl);
+        pl.draw(this.getContext("2d"))
+        return pl;
+    };
+    
     self.createLine = function(x1,y1,x2,y2,configs={strokestyle:"black",linewidth:2,tags:""}) {
         var gl = {
             x1: x1,
