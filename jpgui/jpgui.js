@@ -1,109 +1,131 @@
 
 /*
-* Descrição: JPGUI é uma biblioteca gráfica que facilita a construção de janelas e 
+* Descrição: JPGUI é uma biblioteca gráfica que facilita a construção de janelas e
 * controles em páginas web.
 * Autor: João Paulo F da Silva
-* Modificação: 04/2019
-* Versão: 1.0.2
+* Modificação: 12/2020
+* Versão: 1.4.0
 */
 
 
-Result = {NULL:0, OK:1, CANCEL:2, YES:3, NO:4};
-Buttons = {NONE:0, LEFT:1, RIGHT:2};
+ResponseResult = {NULL:0, OK:1, CANCEL:2, YES:3, NO:4};
+MouseButtons = {NONE:0, LEFT:1, RIGHT:2};
 
-function newElement(parent, tag='') {
-  var element = document.createElement(tag);
-  if(parent)
-    parent.appendChild(element);
-  element.destroy = function() {
-    if(!this.parentNode) return;
-    if(this.ondestroy&&this.ondestroy(this)) return;
-    this.parentNode.removeChild(this);
-  }
-  element.ondestroy = null;
-  return element;
-}
-
-function newJPInput(parent=null,type='text',value='',readonly=false) {
-  var element = newElement(parent,'input');
-  element.type = type;
-  element.value = value;
-  element.className = 'input-'+type;
-  element.classNameBasic = 'input-'+type;
-  Object.defineProperty(element,'readonly',{
-    set(value){
-      element.readOnly = value;
-      if(value) {
-        element.className = "readonly " + element.className;
-      }else{
-        element.className = element.className.replace(/readonly\s/g,'');
+function newElement(tag, args={}) {
+    var element = document.createElement(tag);
+    element.ondestroy = null;
+    Object.defineProperty(element,'parent', {
+        set: function (value) {
+            element.setParent(value);
+        },
+        get: function () {return element.getParent();},
+        configurable: true
+    });
+    Object.defineProperty(element,'text',{
+        set: function (value) {
+          if (element.innerText == value) return;
+          element.innerText = value;
+        },
+        get: function () {return element.innerText;},
+        configurable: true
+    });
+    element.destroy = function() {
+        if(!this.parent) return;
+        if(this.ondestroy&&this.ondestroy(this)) return;
+        this.parent.removeChild(this);
+    };
+    element.setParent = function (value) {
+      if (this.parentNode != null) {
+        this.parentNode.removeChild(this);
+        this.parentNode = null;
       }
-    },
-    get(){return element.readOnly;}
-  });
-  element.readonly = readonly;
-  return element;
+      if (value !== null) {
+          try {
+              value.appendChild(this);
+          } catch (ex) {
+            console.log(ex.message);
+          }
+      }
+    };
+    element.getParent = function () { return this.parentNode; }
+    element.setProperties = function (props={}) {
+        //definindo as propriedades do elemento passados em args
+        var self = this;
+        Object.keys(props).forEach(function(key) {
+            if (key===null) return;
+            self[key] = props[key];
+        });
+    };
+    element.setProperties(args);
+    return element;
 }
 
-function newJPLabel(parent=null,text='') {
-  var element = newElement(parent, 'div');
+function newJPInput(args={}) {
+    var element = newElement("input");
+    element.className = "entry";
+    element.__readonly = false;
+    Object.defineProperty(element,'readonly',{
+      set(value){
+        if (element.__readonly == value) return;
+        element.__readonly = value;
+        if(value) {
+          element.className = element.className + " readonly";
+        }else{
+          element.className = element.className.replace(/readonly\s/g,'');
+        }
+      },
+      get(){return element.__readonly;}
+    });
+    element.setProperties(args);
+    return element;
+}
+
+function newJPLabel(args={}) {
+  var element = newElement('div');
   element.style.display = 'inline-block';
   element.className = 'label';
-  
-  element.setText = function(value) {
-    this.innerText = value;
-  }
-  
-  element.getText = function() {
-    return this.innerText;
-  }
-  
-  element.setText(text);
-  
+  element.setProperties(args);
   return element;
 }
 
-function newJPButton(parent=null,text='') {
-  var element = newJPInput(parent,'button',text);
+function newJPButton(args={}) {
+  var element = newElement('button');
   element.className = 'button';
-  element.classNameBasic = 'button';
-  Object.defineProperty(element,'text',{
-    set(value){
-      element.value = value;
-    },
-    get(){return element.value;}
-  });
+  element.result = ResponseResult.NULL;
+  element.setProperties(args);
   return element;
 }
 
-function newJPComboBox(parent=null,items=[]) {
-  var element = newElement(parent,'select');
-  element.className = 'combobox select';  
-  element.getItem = function(index) {
-    return element.getElementsByTag('option')[index];
-  };
-  element.appendItems = function(aitems) {
-    element = this;
-    aitems.forEach(function(item, index){
-      var o = document.createElement("option");
-      o.value = item.value;
-      o.innerHTML = item.text;
-      element.appendChild(o);
+function newJPComboBox(args={}) {
+    var element = newElement('select');
+    element.className = 'combobox select';
+    Object.defineProperty(element,'items',{
+        set(value){
+            element.innerHTML = "";
+            element.appendItems(value);
+        },
+        get(){ return element.getElementsByTag('option'); }
     });
-  }
-  element.appendItems(items);
-  //
-  return element;
+    element.getItem = function(index) {
+        return element.items[index];
+    };
+    element.appendItems = function(aitems) {
+        element = this;
+        aitems.forEach(function(item, index) {
+            var o = document.createElement("option");
+            o.value = item.value;
+            o.innerHTML = item.text;
+            element.appendChild(o);
+        });
+    }
+    element.items = [];
+    element.setProperties(args);
+    return element;
 }
 
-function newJPTextArea(parent=null,text='',rows=5,cols=50,readonly=false) {
-  var element = newElement(parent,'textarea');
+function newJPTextArea(args={parent:null,text:'',rows:5,cols:50,readonly:false}) {
+  var element = newElement('textarea');
   element.className = 'textarea';
-  element.classNameBasic = 'textarea';
-  element.rows = rows;
-  element.cols = cols;
-  element.readonly = readonly;
-  element.value = text;
   Object.defineProperty(element,'readonly',{
     set(value){
       element.readOnly = value;
@@ -115,42 +137,74 @@ function newJPTextArea(parent=null,text='',rows=5,cols=50,readonly=false) {
     },
     get(){return element.readOnly;}
   });
+  element.setProperties(args);
   return element;
 }
 
-function newJPPanel(parent=null,inline=false) {
-  var element = newElement(parent,'div');
-  element.className = 'panel';
-  if(inline)
-    element.style.display = 'inline-block';
-  return element;
+function newJPPanel(args={}) {
+    var element = newElement('div');
+    element.className = 'panel';
+    Object.defineProperty(element,'inline',{
+      set(value){
+          if (element.inline === value) return;
+          if(value===true) {
+              element.style.display = 'inline-block';
+          } else {
+              element.style.display = 'block';
+          }
+      },
+      get(){return element.style.display === 'inline-block'; }
+    });
+    element.inline = false;
+    element.setProperties(args);
+    return element;
 }
 
-function newJPForm(parent,content) {
-  var element = newElement(parent,'form');
-  element.appendChild(content);
+function newJPGroupBox(args={}) {
+
+  var self = newElement('fieldset');
+
+  newElement('legend', {parent:self});
+  newElement('div', {parent:self});
+
+  Object.defineProperty(self, 'text', {
+    set (value) {self.childNodes[0].text = value;},
+    get () {return self.childNodes[0];}
+  });
+
+  self.appendChild = function(child) {
+    this.childNodes[1].appendChild(child);
+  }
+
+  self.setProperties(args);
+
+  return self;
+
+}
+
+function newJPForm(args={}) {
+  var element = newElement('form', args);
   element.className = 'form';
   return element;
 }
 
-function newJPGrid(parent=null) {
+function newJPGrid(args={}) {
 
-  var element = newJPPanel(parent);
-  element.table = newElement(element,'table');
+  var element = newJPPanel(args);
+  element.table = newElement('table', args={parent:element});
   element.className = "grid";
   element.table.className = "table";
 
   element.createColumn = function(row=null,colspan=1,rowspan=1,child=null) {
-    var c = newElement(row,'td');
+    var c = newElement('td', {parent:row});
     c.colSpan = colspan;
     c.rowSpan = rowspan;
-    if(child)
-      c.appendChild(child);
+    if(child) c.appendChild(child);
     return c;
   }
 
   element.createRow = function(columns=[],parent=null) {
-    var tr = newElement(parent,'tr');
+    var tr = newElement('tr', {parent:parent});
     columns.forEach(function(item,index){
       tr.appendChild(item);
     });
@@ -185,57 +239,93 @@ function newJPGrid(parent=null) {
 
 }
 
-function newJPTableView(parent=null) {
-  var element = newElement(parent,'div');
-  element.thead = newElement(element,'table');
-  element.panelBody = newJPPanel(element)
-  element.tbody = newElement(element.panelBody,'table');
-  
+function newJPTableView(args={}) {
+
+  var element = newElement('div');
+
+  element.thead = newElement('table', {parent:element});
+  element.panelBody = newJPPanel({parent:element})
+  element.tbody = newElement('table', {parent:element.panelBody});
+
   element.className = 'tableview';
+  element.style.padding = '5px';
   element.thead.className = 'thead';
   element.tbody.className = 'tbody';
-  
+
   element.thead.style.display = 'block';
   element.tbody.style.display = 'inline-block';
-  
-  element.selection = [];
-  element.selected = null;
+
+  element.__selection = [];
+  element.__selected = null;
+
+  Object.defineProperty(element,'header', {
+      set (value) {
+          element.setHeader(value);
+      }
+  });
+
+  Object.defineProperty(element,'values', {
+      set (value) {
+          element.setValues(value);
+      }
+  });
+
+  Object.defineProperty(element,'selection', {
+    get() {return element.__selection;}
+  });
+
+  Object.defineProperty(element,'selected', {
+    set(value){
+      element.__selected = value;
+      element.__selection = [];
+      if (element.tbody.childNodes.length===0) return;
+      element.tbody.childNodes[1].childNodes.forEach(function(item, index) {
+        if(index===value){
+          element.__selection = [index];
+          item.className = 'selected';
+        }else{
+          item.className = 'no-selected';
+        }
+      });
+    },
+    get(){return element.__selected;}
+  });
 
   element.setHeader = function(value) {
     this.thead.innerHTML = '';
-    this.setValues([]);
-    var cg = newElement(this.thead,'colgroup');
-    var th = newElement(this.thead,'thead');
-    var tr = newElement(th,'tr');
-    value.forEach(function(item,index) {
-      newElement(cg,'col');
-      newElement(tr,'th').innerText = item;
+    //this.setValues([]);
+    var cg = newElement('colgroup', {parent:this.thead});
+    var th = newElement('thead', {parent:this.thead});
+    var tr = newElement('tr', {parent:th});
+    value.forEach(function(item, index) {
+      newElement('col', {parent:cg});
+      newElement('th', {parent:tr}).text = item;
     });
   };
 
   element.setValues = function(value) {
-    this.selection = [];
-    this.selected = null;
+    this.__selection = [];
+    this.__selected = null;
     this.tbody.innerHTML = '';
-    var cg = newElement(this.tbody,'colgroup');
-    var tb = newElement(this.tbody,'tbody');
+    var cg = newElement('colgroup', {parent:this.tbody});
+    var tb = newElement('tbody', {parent:this.tbody});
     value.forEach(function(linha,l) {
-      var tr = newElement(tb,'tr');
+      var tr = newElement('tr', {parent:tb});
       var selalter = false;
       tr.className = 'no-selected';
       tr.onclick = function(e) {
         var tr = this;
         var self = tr.parentNode.parentNode.parentNode.parentNode;
-        this.parentNode.childNodes.forEach(function(item,index) {
+        this.parentNode.childNodes.forEach(function(item, index) {
           if(item==tr){
             if(e.ctrlKey) {
               self.selection.push(index);
             }else{
-              self.selection = [index];
+              self.__selection = [index];
             }
             item.className = 'selected';
-            selalter = self.selected != index;
-            self.selected = index;
+            selalter = self.__selected != index;
+            self.__selected = index;
           }else{
             item.className = 'no-selected';
           }
@@ -251,182 +341,214 @@ function newJPTableView(parent=null) {
         self.onSelectionChanged = clk;
       };
       linha.forEach(function(column,c) {
-        newElement(tr,'td').innerText = column;
+        newElement('td', {parent:tr}).innerHTML = column;
       });
     });
     this.updateValues();
    };
-  
+
   element.updateValues = function() {
     var tb = this.tbody.getElementsByTagName('tbody')[0];
-    if(tb.childNodes.length==0) return;
+    //var thead = this.tbody.getElementsByTagName('tbody')[0];
+    if(this.thead.childNodes.length==0) return;
+    var tr1 = this.thead.getElementsByTagName('tr')[0];
     var cg1 = this.thead.getElementsByTagName('colgroup')[0];
     var cg2 = this.tbody.getElementsByTagName('colgroup')[0];
-    tb.childNodes[0].childNodes.forEach(function(item,index){
-      var c1 = cg1.childNodes[index].style;
-      c1.width = item.offsetWidth + 'px';
-      newElement(cg2,'col').style.width = c1.width;
-    });    
+    if(tb.childNodes.length > 0) {
+        var tw = 0;
+        tb.childNodes[0].childNodes.forEach(function(item,index){
+            var thcol = cg1.childNodes[index];
+            var tdcol = newElement('col', {parent:cg2});
+            var th = tr1.childNodes[index];
+            var td = item;
+            var w = td.clientWidth;
+            if (th.clientWidth > w) {
+              w = th.clientWidth;
+            }
+            tw += w;
+            thcol.style.width = w + 'px';
+            tdcol.style.width = thcol.style.width;
+        });
+        this.style.width = (tw + 20) + 'px';
+        this.tbody.style.width = this.style.width;
+        this.thead.style.width = this.style.width;
+    }
   }
 
   element.onSelectionChanged = null;
   element.onSelectionDblClick = null;
 
+  element.setProperties(args);
+
   return element;
 
 }
 
-function newJPLogin(parent,url='',title='Login',userTitle='User',passTitle='Password',buttonTitle='Logon') {
+function newJPMask(args={}) {
 
-  var grid = newJPGrid(null);
-  var element = newJPForm(parent,grid);
+  var element = newJPPanel(args);
 
-  element.ltitle = newJPLabel(null,title);
-  element.user = newJPInput(null,'text');
-  element.pass = newJPInput(null,'password');
-  element.message = newJPLabel(null,'');
-  element.button = newJPInput(null,'submit',buttonTitle);
+  this.child = null;
 
-  element.method = 'POST';
-  element.action = url;
-
-  element.className = 'login';
-  element.ltitle.className = 'title';
-
-  element.user.name = 'user';
-  element.pass.name = 'pass';
-
-  grid.insert(0,0,element.ltitle,3);
-  grid.insert(1,0,newJPLabel(null,userTitle));
-  grid.insert(1,1,element.user,2);
-  grid.insert(2,0,newJPLabel(null,passTitle));
-  grid.insert(2,1,element.pass,2);
-  grid.insert(3,0,element.message,2);
-  grid.insert(3,2,element.button);
-
-  element.onsubmit = function(e) {
-    if(element.onlogin) return element.onlogin(e);
-  };
-
-  element.getDataForm = function() {
-    return this.user.name+'='+this.user.value+'&'+this.pass.name+'='+this.pass.value;
-  };
-
-  Object.defineProperty(element,'dataform',{
-    get(){return element.getDataForm();}
-  });
-
-  element.onlogin = null;
-  return element;
-
-}
-
-function newJPMask(parent=null,child=null,background='rgba(0,0,0,0.5)') {
-
-  var element = newJPPanel(parent);
-
-  element.child = child;
   element.className = "mask";
-
-  if(child){
-    element.appendChild(child);
-  }
 
   element.style.position = "absolute";
   element.style.top = "0px";
   element.style.left = "0px";
   element.style.width = "100%";
   element.style.height = "100%";
-  element.style.background = background;
+  element.style.background = 'rgba(0,0,0,0.5)';
 
   element.destroy = function () {
     var body = document.getElementsByTagName("body")[0];
     body.removeChild(this);
   }
 
-  if(!parent) {
-    var body = document.getElementsByTagName("body")[0];
-    body.appendChild(element);
+  if(element.parent === null) {
+    element.parent = document.getElementsByTagName("body")[0];
   }
 
   return element;
 
 }
 
-function newJPWindow(parent=null,toplevel=false,title='Window',buttons=true,resizable=true) {
-  
-  if (!parent) parent = document.getElementsByTagName("body")[0];
-  
-  var element = newJPPanel(parent);
+function newJPWindow(args={}) {
+
+  if (!Object.keys(args).includes('parent')) {
+      if (!Object.keys(args).includes('toplevel') || args['toplevel'] === false) {
+          args.parent = document.getElementsByTagName("body")[0];
+      }
+  }
+
+  var element = newJPPanel();
+
   element.style.visibility = "hidden";
   element.mask = null;
-  if(toplevel){
-    element.mask = newJPMask(parent,element);
-    element.mask.style.visibility = 'hidden';
-    element.ondestroy = function() {
-      element.mask.destroy();
-    };
-  }
-  
-  element.resizable = resizable;
-  
+  element.ptop = newJPPanel({parent:element});
+  element.ptitle = newJPLabel({parent:element.ptop})
+  element.mainpanel = newJPPanel({parent:element});
+  element.__defaultWidth = 100;
+  element.__defaultHeight = 100;
+  element.__resizable = true;
+
+  element.__toplevel = false;
+  element.__topbtns  = false;
+
+  Object.defineProperty(element, 'toplevel', {
+      set(value) {
+          if (element.__toplevel === value) { return; }
+          element.__toplevel = value;
+          if (value === true) {
+              element.mask = newJPMask({child:element});
+              element.mask.style.visibility = 'hidden';
+              element.ondestroy = function() {
+                this.mask.destroy();
+              };
+              element.parent = element.mask;
+          } else {
+              element.parent = element.mask.parent;
+              element.mask.destroy();
+          }
+      },
+      get() { return element.__toplevel; }
+  });
+
+  Object.defineProperty(element, 'topbuttons', {
+      set(value) {
+
+          if (element.__topbtns === value) { return; }
+
+          element.__topbtns = value;
+
+          if (value === true) {
+
+              element.botoes = newJPPanel({parent:element.ptop, inline:true});
+              element.botoes.className = 'window-buttons';
+
+              if(element.resizable) {
+                element.btnmaxmin = newJPButton({parent:element.botoes, text:'+'});
+                element.btnmaxmin.className = 'window-button minmax-button';
+                element.btnmaxmin.window = element;
+                element.btnmaxmin.onclick = function() {
+                  if(this.window.maximinized()) {
+                    this.window.minimize();
+                    element.btnmaxmin.value = '+';
+                  }else{
+                    this.window.maximinize();
+                    element.btnmaxmin.value = '-';
+                  }
+                }
+              }
+
+              element.btnclose = newJPButton({text:'x', parent:element.botoes});
+              element.btnclose.className = 'window-button close-button';
+              element.btnclose.window = element;
+              element.btnclose.onclick = function() {
+                if(this.window.onclose&&this.window.onclose()){
+                  return;
+                }
+                this.window.destroy();
+              }
+
+          } else {
+
+              element.ptop.removeChild(element.botoes);
+
+          }
+      },
+      get() { return element.__topbtns; }
+  });
+
+  Object.defineProperty(element, 'title', {
+      set(value) {
+          element.ptitle.text = value;
+      },
+      get() { return element.ptitle.text; }
+  });
+
+  Object.defineProperty(element, 'resizable', {
+      set(value) {
+          if (element.__resizable === value) return;
+          element.__resizable = value;
+          if (element.__resizable) {
+              element.style.width = element.__defaultWidth + 'px';
+              element.style.height = element.__defaultHeight + 'px';
+          } else {
+              element.style.width = "";
+              element.style.height = "";
+              element.mainpanel.style.width = "";
+              element.mainpanel.style.height = "";
+          }
+      },
+      get() { return element.__resizable; }
+  });
+
+  element.topbuttons = true;
+
+  element.toplevel = false;
+
+  element.title = "Window";
+
   element.className = 'window';
 
-  /***GUI***/
-  element.ptop = newJPPanel(element);
-  element.mainpanel = newJPPanel(element);
-  
   element.mainpanel.className = 'main-panel';
-  
+
   with(element.mainpanel.style) {
     overflow = 'auto';
     margin = '0px 5px 5px 5px';
-  }
-
-  if(buttons) {
-    element.botoes = newJPPanel(element.ptop,true);
-    element.botoes.className = 'window-buttons';
-    
-    if(element.resizable) {
-      element.btnmaxmin = newJPButton(element.botoes,'+');
-      element.btnmaxmin.className = 'window-button minmax-button';
-      element.btnmaxmin.window = element;
-      element.btnmaxmin.onclick = function() {
-        if(this.window.maximinized()) {
-          this.window.minimize();
-          element.btnmaxmin.value = '+';
-        }else{
-          this.window.maximinize();
-          element.btnmaxmin.value = '-';
-        }
-      }
-    }
-    
-    element.btnclose = newJPButton(element.botoes,'x');
-    element.btnclose.className = 'window-button close-button';
-    element.btnclose.window = element;
-    element.btnclose.onclick = function() {
-      if(this.window.onclose&&this.window.onclose()){
-        return;
-      }
-      this.window.destroy();
-    }
-    
-  }
-  
-  element.ptitle = newJPLabel(element.ptop, title);
+  };
 
   element.ptitle.className = 'title-panel';
   element.ptop.className = 'top-panel';
   element.ptitle.className = 'title';
-    
+
   element.onresized = null;
-  
+
   element.doresized = function() {
-    this.updateSize();    
+    this.updateSize();
     this.onresized && this.onresized(this.offsetWidth, this.offsetHeight);
   }
-  
+
   element.maximinize = function() {
     if(this.maximinized()) return;
     this.style.width = '100%';
@@ -435,7 +557,7 @@ function newJPWindow(parent=null,toplevel=false,title='Window',buttons=true,resi
     this.style.top = '0px';
     this.doresized();
   }
-  
+
   element.minimize = function() {
     if(!this.maximinized()) return;
     this.style.width = this.defaultWidth + 'px';
@@ -444,56 +566,35 @@ function newJPWindow(parent=null,toplevel=false,title='Window',buttons=true,resi
     this.style.left = this.defaultLeft + 'px';
     this.doresized();
   }
-  
+
   element.maximinized = function() {
     return this.style.width === '100%' && this.style.height === '100%';
   }
-  
+
   element.geometry = function(x, y, width, height) {
     this.size(width, height);
     this.move(x, y);
   }
-  
-  element.updateSize = function() {    
-    //this.mainpanel.style.width = this.offsetWidth + 'px';
-    this.mainpanel.style.height = (this.offsetHeight - this.ptop.offsetHeight - 5) + 'px';
+
+  element.updateSize = function() {
   }
-  
+
   element.size = function(width, height) {
     if(this.maximinized()) return;
-    if(this.offsetWidth===width&&this.offsetHeight===height) return;
-    this.defaultHeight = height;
-    this.defaultWidth = width;
+    if(this.offsetWidth===width && this.offsetHeight===height) return;
+    this.__defaultHeight = height;
+    this.__defaultWidth = width;
     this.style.width = width + 'px';
     this.style.height = height + 'px';
     this.doresized();
   }
 
-  element.parentNode.onmousemove = function(evt) {
-      if(!this.selectedWindow) return;
-      var win = this.selectedWindow;      
-      if(!win.mdown) return;    
-      var dx = evt.screenX - win.mdown.screen.x;
-      var dy = evt.screenY - win.mdown.screen.y;  
-      if(win.mdown.moving) {
-        win.move(win.mdown.left+dx, win.mdown.top+dy);
-      }else if(win.mdown.resizing) {
-        if(win.style.cursor=='se-resize') {
-          win.size(win.mdown.width + dx, win.mdown.height + dy);
-        }else if(win.style.cursor=='e-resize') {
-          win.size(win.mdown.width + dx, win.mdown.height);
-        }else if(win.style.cursor=='s-resize') {
-          win.size(win.mdown.width, win.mdown.height + dy);
-        }
-      }
-  };
-  
   element.onmousedown = function(evt) {
-    this.mdown = {offset:{x:evt.offsetX,y:evt.offsetY}, 
+    this.mdown = {offset:{x:evt.offsetX,y:evt.offsetY},
                   screen:{x:evt.screenX,y:evt.screenY},
                   left:this.offsetLeft,
                   top:this.offsetTop,
-                  width:this.offsetWidth, 
+                  width:this.offsetWidth,
                   height:this.offsetHeight,
                   addWidth:function(x) {
                               var d = x - this.x;
@@ -503,32 +604,33 @@ function newJPWindow(parent=null,toplevel=false,title='Window',buttons=true,resi
                               var d = y - this.y;
                               return this.height + d;
                            },
-                  moving:this.ptop.style.cursor=='move'&&evt.buttons==Buttons.LEFT,
-                  resizing:this.resizable&&(this.style.cursor=='se-resize'||this.style.cursor=='e-resize'||this.style.cursor=='s-resize')&&evt.buttons===Buttons.LEFT
+                  moving:this.ptop.style.cursor=='move'&&evt.buttons==MouseButtons.LEFT,
+                  resizing:this.resizable&&(this.style.cursor=='se-resize'||this.style.cursor=='e-resize'||this.style.cursor=='s-resize')&&evt.buttons===MouseButtons.LEFT
                   };
     this.parentNode.selectedWindow = this;
   }
-  
+
   element.onmouseup = function(){
     this.mdown = null;
+    this.ptop.style.cursor = 'default';
   }
-  
-  element.onmousemove = function(evt) {   
-    if(this.mdown) return; 
-    intop = evt.offsetY < this.ptop.offsetHeight;
-    
+
+  element.onmousemove = function(evt) {
+    if(this.mdown) return;
+    intop = evt.y < this.offsetTop + this.ptop.offsetHeight;
+
     if(intop) {
       this.ptop.style.cursor = 'move';
       return;
     }else{
       if(this.ptop.style.cursor != 'default') this.ptop.style.cursor = 'default';
     }
-      
+
     if(!this.resizable) {
       if(this.style.cursor != 'default') this.style.cursor = 'default';
       return;
     }
-    
+
     var rx = this.offsetWidth - 10;
     var by = this.offsetHeight - 10;
     inborderx = rx < evt.offsetX && evt.offsetX < this.offsetWidth;
@@ -541,18 +643,13 @@ function newJPWindow(parent=null,toplevel=false,title='Window',buttons=true,resi
       this.style.cursor = 'e-resize';
     }else if(inbordery) {
       this.style.cursor = 's-resize';
-    }    
+    }
   }
 
   element.ptop.onmouseup = function(e) {
       this.mdown = null;
   };
   /*=========================*/
-
-  /*if(!parent){
-    var body = document.getElementsByTagName("body")[0];
-    body.appendChild(this.content);
-  }*/
 
   element.style.position = "absolute";
 
@@ -561,6 +658,7 @@ function newJPWindow(parent=null,toplevel=false,title='Window',buttons=true,resi
 
   //methods and functions
   element.move = function(x, y) {
+    if (y < 0) y = 0;
     if(this.maximinized()) return;
     this.defaultLeft = x;
     this.defaultTop = y;
@@ -574,103 +672,146 @@ function newJPWindow(parent=null,toplevel=false,title='Window',buttons=true,resi
   };
 
   element.alignCenter = function() {
-    //aplicando estilos
     wmx = (this.parentNode.offsetWidth / 2).toFixed(0);
     wmy = (this.parentNode.offsetHeight / 2).toFixed(0);
     emx = (this.offsetWidth / 2).toFixed(0);
     emy = (this.offsetHeight / 2).toFixed(0);
-    this.move(wmx-emx,wmy-emy);
+    this.move(wmx - emx, wmy - emy);
   };
-  
-  element.setTitle = function(value) {
-    this.ptitle.setText(value);
-  }
-  
+
   element.appendChild = function(child) {
     element.mainpanel.appendChild(child);
   }
-  
-  //
-  element.geometry(0,0,10,10);
 
-  return element;
+  element.setProperties(args);
 
-}
-
-function  newJPDialog(parent=null,title='Mensagem',content=null,buttons=[],exit_onclick=false,view_buttons=false) {
-
-  var element = newJPWindow(parent,true,title,view_buttons,false);
-  element.className += " dialog";
-  element.content = newElement(element,'div');
-  element.content.className = "content";
-  element.content.style.padding = '10px';
-
-  element.dbuttons = dbuttons = newJPPanel(element);
-  dbuttons.className = "buttons";  
-  
-  if(exit_onclick){
-    element.mask.onclick = function (e) {
-      var child = this.child;
-      if(child.offsetLeft<e.clientX&&e.clientX<(child.offsetLeft+child.clientWidth)&&
-         child.offsetTop<e.clientY&&e.clientY<(child.offsetTop+child.clientHeight)){
-        return;
+  element.parentNode.onmousemove = function(evt) {
+      if(!this.selectedWindow) return;
+      var win = this.selectedWindow;
+      if(!win.mdown) return;
+      var dx = evt.screenX - win.mdown.screen.x;
+      var dy = evt.screenY - win.mdown.screen.y;
+      if(win.mdown.moving) {
+        win.move(win.mdown.left+dx, win.mdown.top+dy);
+      }else if(win.mdown.resizing) {
+        if(win.style.cursor=='se-resize') {
+          win.size(win.mdown.width + dx, win.mdown.height + dy);
+        }else if(win.style.cursor=='e-resize') {
+          win.size(win.mdown.width + dx, win.mdown.height);
+        }else if(win.style.cursor=='s-resize') {
+          win.size(win.mdown.width, win.mdown.height + dy);
+        }
       }
-      this.destroy();
-    }
-  }
-
-  //adicionando botoes
-  buttons.forEach(function (item, index) {
-    dbuttons.appendChild(item);
-    item.window = element;
-    if(item.result){
-        item.onclick = function() {
-            this.window.result = this.result;
-            this.window.onresult && this.window.onresult(this.window,this.result);
-        };
-    }
-  });
-
-  element.setContent = function(obj) {
-    this.content.innerHTML = '';
-    if(obj) this.content.appendChild(obj);
-    if(this.dbuttons.offsetWidth > this.content.offsetWidth) {
-      this.style.minWidth  = (this.dbuttons.offsetWidth + 30) + 'px';
-    }else{
-      this.style.minWidth  = (this.content.offsetWidth + 30)  + 'px';
-    }
-    this.style.minHeight = (20 + this.ptop.offsetHeight + this.content.offsetHeight + this.dbuttons.offsetHeight) + 'px';
-    this.updateSize();
-    this.alignCenter();
-  }
-
-  element.showModal = function(onresult){
-      this.onresult = onresult;
-      this.show();
   };
-  
-  element.onresized = function() {
-    this.content.style.width = (this.offsetWidth - 20) + 'px';
-    this.content.style.height = (this.offsetHeight - this.dbuttons.offsetHeight - this.ptop.offsetHeight - 40) + 'px';
-  }
 
-  element.onresult = null;
-
-  element.setContent(content);
-
-  element.alignCenter();
-  
+  element.parentNode.onmouseup = function(evt) {
+      if(!this.selectedWindow) return;
+      var win = this.selectedWindow;
+      win.mdown = null;
+      win.ptop.style.cursor = 'default';
+  };
 
   return element;
 
 }
 
-function newDialogMessage(title,msg,onclose=null) {
-  var bok = newJPButton(null,'Ok');
-  bok.result = Result.OK;
-  var dlg001 =  newJPDialog(null,title,label=newJPLabel(null,msg),[bok],true);
+function newJPDialog(args={}) {
+
+    var element = newJPWindow({resizable:false, toplevel:true, topbuttons:false});
+
+    element.className += " dialog";
+    element.__content = newElement('div', {parent:element});
+    element.__content.className = "content";
+    element.__content.style.padding = '10px';
+    element.__dbuttons = newJPPanel({parent:element, className:"buttons"});
+    element.__exitinclick = false;
+
+    Object.defineProperty(element, 'exitinclick', {
+        set(value) {
+            if (!element.toplevel) return;
+            if (element.__exitinclick === value) { return; }
+            element.__exitinclick = value;
+            if (value === true) {
+                element.mask.onclick = function (e) {
+                    var child = this.child;
+                    if(child.offsetLeft<e.clientX&&e.clientX<(child.offsetLeft+child.clientWidth)&&
+                        child.offsetTop<e.clientY&&e.clientY<(child.offsetTop+child.clientHeight)){
+                        return;
+                    }
+                    this.destroy();
+                }
+            } else {
+              element.mask.onclick = null;
+            }
+        },
+        get() { return element.__exitinclick; }
+    });
+
+    Object.defineProperty(element, 'buttons', {
+      set(value) {
+          element.__dbuttons.innerHTML = "";
+          value.forEach(function (item, index) {
+            element.__dbuttons.appendChild(item);
+            item.window = element;
+            if(item.result!==null){
+                item.onclick = function() {
+                    this.window.onresult && this.window.onresult(this.window, this.result);
+                };
+            }
+          });
+      },
+      get() { return element.__dbuttons.childNodes; }
+    });
+
+    Object.defineProperty(element, 'content', {
+      set(value) {
+          element.setContent(value);
+      },
+      get() { return element.__content.childNodes.length > 0 ? element.__content.childNodes[0] : null; }
+    });
+
+    element.setContent = function(obj) {
+        this.__content.innerHTML = '';
+        if(obj) this.__content.appendChild(obj);
+        this.alignCenter();
+    }
+
+    element.showModal = function(onresult){
+        this.onresult = onresult;
+        this.show();
+    };
+
+    element.onresized = function() {
+        this.__content.style.width = (this.offsetWidth - 40) + 'px';
+        this.__content.style.height = (this.offsetHeight - this.__dbuttons.offsetHeight - this.ptop.offsetHeight - 40) + 'px';
+    }
+
+    element.onresult = null;
+
+    element.setProperties(args);
+
+    element.alignCenter();
+
+    return element;
+
+}
+
+function newDialogMessage(title, msg, onclose=null) {
+  var bok = newJPButton({text:'Ok'});
+  bok.result = ResponseResult.OK;
+  var dlg001 =  newJPDialog({
+      title:title,
+      content:newJPLabel({text:msg}),
+      buttons:[bok],
+      exitinclick:true
+  });
   dlg001.ondestroy = onclose;
-  dlg001.showModal(function (sender,result) {sender.destroy();});
+  dlg001.showModal(function (sender, result) {sender.destroy();});
   return dlg001;
 }
 
+function newInput(width, props={}) {
+  var self = newJPInput(props);
+  self.style.width = width + "px";
+  return self;
+}
