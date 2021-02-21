@@ -248,7 +248,7 @@ function newJPTableView(args = {}) {
     element.tbody = newElement('table', { parent: element.panelBody });
 
     element.className = 'tableview';
-    element.style.padding = '5px';
+    //element.style.padding = '5px';
     element.thead.className = 'thead';
     element.tbody.className = 'tbody';
 
@@ -368,11 +368,15 @@ function newJPTableView(args = {}) {
                 thcol.style.width = w + 'px';
                 tdcol.style.width = thcol.style.width;
             });
-            this.style.width = (tw + 20) + 'px';
-            this.tbody.style.width = this.style.width;
-            this.thead.style.width = this.style.width;
+            this.panelBody.style.width = this.scrollWidth + 'px';
+            this.thead.style.width = this.panelBody.clientWidth + 'px';
+            //this.thead.style.width = "100%";
+            /*this.tbody.style.width = this.style.width;
+            this.thead.style.width = this.style.width;*/
         }
     }
+
+    element.onresize = element.updateSizes;
 
     element.onSelectionChanged = null;
     element.onSelectionDblClick = null;

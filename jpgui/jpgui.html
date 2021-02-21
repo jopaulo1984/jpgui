@@ -6,81 +6,95 @@
         <link rel="stylesheet" type="text/css" href="jpgui.css"/>
         <script type="text/javascript" src="jpgui.js"></script>
         <script type="text/javascript">
+
             function showmodal() {
-                var btnCanc = newJPButton(null,'Cancelar');
-                var btnOk = newJPButton(null,'Ok');
-                btnCanc.result = Result.CANCEL;
-                btnOk.result = Result.OK;
-                var d = newJPDialog(null,'Teste Modal',null,[btnCanc,btnOk]);
-                d.showModal(function() {
-                    alert((['Null','Ok','Cancel','Yes','No'])[this.result]);
-                    this.destroy();
+                var btnCanc = newJPButton({
+                    text:'Cancelar',
+                    result:ResponseResult.CANCEL
+                });
+                var btnOk = newJPButton({
+                    text:'Ok',
+                    result:ResponseResult.OK
+                });
+                var d = newJPDialog({
+                    title:'Teste Modal',
+                    buttons:[btnCanc,btnOk]
+                });
+                d.showModal(function(win, result) {
+                    alert((['Null','Ok','Cancel','Yes','No'])[result]);
+                    win.destroy();
                 });
             }
 
             function showlist() {
               var mywindow = newJPWindow();
               var dados = [];
-              var btnCanc = newJPButton(null,'Cancelar');
-              var btnOk = newJPButton(null,'Inserir');
-              var panel = newJPPanel(mywindow);
-              var list = newJPTableView(panel);
-              var grp = newElement(panel,'fieldset');
-              
+              var btnCanc = newJPButton({text:'Cancelar'});
+              var btnOk = newJPButton({text:'Inserir'});
+              var panel = newJPPanel({parent:mywindow});
+              var list = newJPTableView({
+                  parent:panel,
+                  header: ['ID','Nome','email','Endereço'],
+                  values: dados
+              });
+              var grp = newElement('fieldset', {parent:panel});
+
               panel.style.overflow = 'auto';
-              
-              mywindow.setTitle('Lista');
+
+              mywindow.title = 'Lista';
 
               list.style.height = '300px';
-              
-              newElement(grp,'legend').innerText = 'Dados';
 
-              var grid = newJPGrid(grp);
-              var uid = newJPInput(null,'text');
-              var nome = newJPInput(null,'text');
-              var email = newJPInput(null,'email');
-              var ender = newJPInput(null,'text');
-              
+              newElement('legend', {parent:grp}).innerText = 'Dados';
+
+              var grid = newJPGrid({parent:grp});
+              var uid = newJPInput({type:'text'});
+              var nome = newJPInput({type:'text'});
+              var email = newJPInput({
+                  type:'email',
+                  placeholder:'email@email.com'
+              });
+              var ender = newJPInput({type:'text'});
+
               uid.style.width = '120px';
               nome.style.width = '320px';
               email.style.width = '320px';
               ender.style.width = '380px';
-              
+
               uid.value = '5631';
               nome.value = 'Tatiane Do Carmo';
               email.value = 'taticarm@email.com';
               ender.value = 'Rua Ambrósio, 45, Rita de Cássia, Rio de Janeiro, RJ';
 
-              grid.insert(0,0,newJPLabel(null,'ID'));
+              grid.insert(0,0,newJPLabel({text:'ID'}));
               grid.insert(0,1,uid);
-              grid.insert(1,0,newJPLabel(null,'Nome'));
+              grid.insert(1,0,newJPLabel({text:'Nome'}));
               grid.insert(1,1,nome);
-              grid.insert(2,0,newJPLabel(null,'Email'));
+              grid.insert(2,0,newJPLabel({text:'Email'}));
               grid.insert(2,1,email);
-              grid.insert(3,0,newJPLabel(null,'Endereço'));
+              grid.insert(3,0,newJPLabel({text:'Endereço'}));
               grid.insert(3,1,ender);
               grid.insert(3,2,btnOk);
-              
+
               btnOk.onclick = function(){
                 dados.push([uid.value,nome.value,email.value,ender.value]);
-                list.setValues(dados);
+                list.values = dados;
               }
-              
-              mywindow.size(560, 360);
-              
-              list.setHeader(['ID','Nome','email','Endereço']);
-              list.setValues(dados);
-              
+
+              mywindow.size(560, 560);
+
+              mywindow.alignCenter();
+
               mywindow.show();
-              
+
             }
-            
+
             function showLogin(){
                 var win = newJPWindow();
-                var frm = newJPLogin(win);
+                //var frm = newJPLogin(win);
                 win.show();
             }
-            
+
         </script>
     </head>
     <body>
