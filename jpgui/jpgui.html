@@ -27,17 +27,18 @@
             }
 
             function showlist() {
-              var mywindow = newJPWindow();
+              var mywindow = new JPWindow();
               var dados = [];
               var btnCanc = newJPButton({text:'Cancelar'});
               var btnOk = newJPButton({text:'Inserir'});
-              var panel = newJPPanel({parent:mywindow});
-              var list = newJPTableView({
-                  parent:panel,
-                  header: ['ID','Nome','email','Endereço'],
-                  values: dados
+              var panel = newJPPanel({parent: mywindow});
+              var list = new JPTableView({
+                  parent: panel,
+                  header: ['ID','Nome','email','Endereço']
               });
               var grp = newElement('fieldset', {parent:panel});
+              
+              //list.setRows(dados);
 
               panel.style.overflow = 'auto';
 
@@ -77,8 +78,7 @@
               grid.insert(3,2,btnOk);
 
               btnOk.onclick = function(){
-                dados.push([uid.value,nome.value,email.value,ender.value]);
-                list.values = dados;
+                list.append([uid.value,nome.value,email.value,ender.value]);
               }
 
               mywindow.size(560, 560);
@@ -95,6 +95,12 @@
                 win.show();
             }
 
+            function msg_box() {
+                msgBox("Escolha","Escolha uma reposta.",[ResponseResult.OK, ResponseResult.CANCEL, ResponseResult.YES, ResponseResult.NO], res => {
+                    alert("Você clicou em '" + ['Nada','Ok','Cancelar','Sim', 'Não'][res] + "'.");
+                });
+            }
+
         </script>
     </head>
     <body>
@@ -102,5 +108,6 @@
         <input type="button" value="Mensagem" onclick="newDialogMessage('Janela de Mensagem','Isto é uma mensagem!',function(){alert('Fechado!');})" />
         <input type="button" value="Lista" onclick="showlist()" />
         <input type="button" value="Login" onclick="showLogin()" />
+        <input type="button" value="msgBox" onclick="msg_box()" />
     </body>
 </html>

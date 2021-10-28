@@ -3,7 +3,7 @@
 // Descrição: JPGUI é uma biblioteca gráfica que facilita a construção de janelas e  //
 // controles em páginas web.                                                         //
 // Autor: João Paulo F da Silva                                                      //
-// Modificação: 12/2020                                                              //
+// Modificação: 10/2021                                                              //
 // Versão: 1.4.0                                                                     //
 ///////////////////////////////////////////////////////////////////////////////////////
 
@@ -769,7 +769,7 @@ class JPTableView extends MyElement {
 
     append = function (line) {
         if (this.table.tbody.childNodes.length == 0) {
-            this.setValues([line]);
+            this.setRows([line]);
             return;
         }
         this.__append(line);
@@ -879,7 +879,7 @@ class JPWindow extends JPPanel {
         
         if (!Object.keys(args).includes('parent')) {
             if (!Object.keys(args).includes('toplevel') || args['toplevel'] === false) {
-                args.parent = document.getElementsByTagName("body")[0];
+                args.parent = document.body;
             }
         }
     
@@ -887,13 +887,12 @@ class JPWindow extends JPPanel {
     
         this.style.visibility = "hidden";
         this.mask = null;
-        this.ptop = newJPPanel({ parent: this });
-        this.ptitle = newJPLabel({ parent: this.ptop })
-        this.mainpanel = newJPPanel({ parent: this });
+        this.ptop = new JPPanel({parent: this});
+        this.mainpanel = new JPPanel({parent: this});
+        this.ptitle = newJPLabel({ parent: this.ptop });
         this.__defaultWidth = 100;
         this.__defaultHeight = 100;
-        this.__resizable = true;
-    
+        this.__resizable = true;    
         this.__toplevel = false;
         this.__topbtns = false;
     
@@ -1002,7 +1001,9 @@ class JPWindow extends JPPanel {
         this.ptop.className = 'top-panel';
         this.ptitle.className = 'title';
     
-        this.onresized = null;        
+        this.onresized = null;
+
+        this.appendChild = this.append;
     
         this.onmousedown = function (evt) {
             this.mdown = {
@@ -1049,8 +1050,8 @@ class JPWindow extends JPPanel {
     
             var rx = this.offsetWidth - 10;
             var by = this.offsetHeight - 10;
-            inborderx = rx < evt.offsetX && evt.offsetX < this.offsetWidth;
-            inbordery = by < evt.offsetY && evt.offsetY < this.offsetHeight;
+            var inborderx = rx < evt.offsetX && evt.offsetX < this.offsetWidth;
+            var inbordery = by < evt.offsetY && evt.offsetY < this.offsetHeight;
             if (!(inborderx || inbordery)) {
                 this.style.cursor = 'default';
             } else if (inborderx && inbordery) {
@@ -1070,7 +1071,7 @@ class JPWindow extends JPPanel {
         this.style.position = "absolute";
     
         //properties
-        this.onclose = null;        
+        this.onclose = null;
     
         this.setProperties(args);
     
@@ -1102,12 +1103,12 @@ class JPWindow extends JPPanel {
     }
 
     //methods and functions
-    doresized = function () {
+    doresized = () => {
         this.updateSize();
         this.onresized && this.onresized(this.offsetWidth, this.offsetHeight);
     }
 
-    maximinize = function () {
+    maximinize = () => {
         if (this.maximinized()) return;
         this.style.width = '100%';
         this.style.height = '100%';
@@ -1116,7 +1117,7 @@ class JPWindow extends JPPanel {
         this.doresized();
     }
 
-    minimize = function () {
+    minimize = () => {
         if (!this.maximinized()) return;
         this.style.width = this.defaultWidth + 'px';
         this.style.height = this.defaultHeight + 'px';
@@ -1125,16 +1126,16 @@ class JPWindow extends JPPanel {
         this.doresized();
     }
 
-    maximinized = function () {
+    maximinized = () => {
         return this.style.width === '100%' && this.style.height === '100%';
     }
 
-    geometry = function (x, y, width, height) {
+    geometry = (x, y, width, height) => {
         this.size(width, height);
         this.move(x, y);
     }
 
-    updateSize = function () {
+    updateSize = () => {
     }
 
     size = (width, height) => {
@@ -1169,317 +1170,17 @@ class JPWindow extends JPPanel {
         this.move(wmx - emx, wmy - emy);
     };
 
-    appendChild = (child) => {
+    /*__append = (child) => {
+        super.appendChild(child);
+    };*/
+
+    append = (child) => {
         this.mainpanel.appendChild(child);
-    }
+    };
     
 }
 
-function newJPWindow(args = {}) {
-
-    //return new JPWindow(args);
-
-    if (!Object.keys(args).includes('parent')) {
-        if (!Object.keys(args).includes('toplevel') || args['toplevel'] === false) {
-            args.parent = document.getElementsByTagName("body")[0];
-        }
-    }
-
-    var element = newJPPanel();
-
-    element.style.visibility = "hidden";
-    element.mask = null;
-    element.ptop = newJPPanel({ parent: element });
-    element.ptitle = newJPLabel({ parent: element.ptop })
-    element.mainpanel = newJPPanel({ parent: element });
-    element.__defaultWidth = 100;
-    element.__defaultHeight = 100;
-    element.__resizable = true;
-
-    element.__toplevel = false;
-    element.__topbtns = false;
-
-    Object.defineProperty(element, 'toplevel', {
-        set(value) {
-            if (element.__toplevel === value) { return; }
-            element.__toplevel = value;
-            if (value === true) {
-                element.mask = newJPMask({ child: element });
-                element.mask.style.visibility = 'hidden';
-                element.ondestroy = function () {
-                    this.mask.destroy();
-                };
-                element.parent = element.mask;
-            } else {
-                element.parent = element.mask.parent;
-                element.mask.destroy();
-            }
-        },
-        get() { return element.__toplevel; }
-    });
-
-    Object.defineProperty(element, 'topbuttons', {
-        set(value) {
-
-            if (element.__topbtns === value) { return; }
-
-            element.__topbtns = value;
-
-            if (value === true) {
-
-                element.botoes = newJPPanel({ parent: element.ptop, inline: true });
-                element.botoes.className = 'window-buttons';
-
-                if (element.resizable) {
-                    element.btnmaxmin = newJPButton({ parent: element.botoes, text: '+' });
-                    element.btnmaxmin.className = 'window-button minmax-button';
-                    element.btnmaxmin.window = element;
-                    element.btnmaxmin.onclick = function () {
-                        if (this.window.maximinized()) {
-                            this.window.minimize();
-                            element.btnmaxmin.value = '+';
-                        } else {
-                            this.window.maximinize();
-                            element.btnmaxmin.value = '-';
-                        }
-                    }
-                }
-
-                element.btnclose = newJPButton({ text: 'x', parent: element.botoes });
-                element.btnclose.className = 'window-button close-button';
-                element.btnclose.window = element;
-                element.btnclose.onclick = function () {
-                    if (this.window.onclose && this.window.onclose()) {
-                        return;
-                    }
-                    this.window.destroy();
-                }
-
-            } else {
-
-                element.ptop.removeChild(element.botoes);
-
-            }
-        },
-        get() { return element.__topbtns; }
-    });
-
-    Object.defineProperty(element, 'title', {
-        set(value) {
-            element.ptitle.text = value;
-        },
-        get() { return element.ptitle.text; }
-    });
-
-    Object.defineProperty(element, 'resizable', {
-        set(value) {
-            if (element.__resizable === value) return;
-            element.__resizable = value;
-            if (element.__resizable) {
-                element.style.width = element.__defaultWidth + 'px';
-                element.style.height = element.__defaultHeight + 'px';
-            } else {
-                element.style.width = "";
-                element.style.height = "";
-                element.mainpanel.style.width = "";
-                element.mainpanel.style.height = "";
-            }
-        },
-        get() { return element.__resizable; }
-    });
-
-    element.topbuttons = true;
-
-    element.toplevel = false;
-
-    element.title = "Window";
-
-    element.className = 'window';
-
-    element.mainpanel.className = 'main-panel';
-
-    with (element.mainpanel.style) {
-        overflow = 'auto';
-        //margin = '0px 5px 5px 5px';
-    };
-
-    element.ptitle.className = 'title-panel';
-    element.ptop.className = 'top-panel';
-    element.ptitle.className = 'title';
-
-    element.onresized = null;
-
-    element.doresized = function () {
-        this.updateSize();
-        this.onresized && this.onresized(this.offsetWidth, this.offsetHeight);
-    }
-
-    element.maximinize = function () {
-        if (this.maximinized()) return;
-        this.style.width = '100%';
-        this.style.height = '100%';
-        this.style.left = '0px';
-        this.style.top = '0px';
-        this.doresized();
-    }
-
-    element.minimize = function () {
-        if (!this.maximinized()) return;
-        this.style.width = this.defaultWidth + 'px';
-        this.style.height = this.defaultHeight + 'px';
-        this.style.top = this.defaultTop + 'px';
-        this.style.left = this.defaultLeft + 'px';
-        this.doresized();
-    }
-
-    element.maximinized = function () {
-        return this.style.width === '100%' && this.style.height === '100%';
-    }
-
-    element.geometry = function (x, y, width, height) {
-        this.size(width, height);
-        this.move(x, y);
-    }
-
-    element.updateSize = function () {
-    }
-
-    element.size = function (width, height) {
-        if (this.maximinized()) return;
-        if (this.offsetWidth === width && this.offsetHeight === height) return;
-        this.__defaultHeight = height;
-        this.__defaultWidth = width;
-        this.style.width = width + 'px';
-        this.style.height = height + 'px';
-        this.doresized();
-    }
-
-    element.onmousedown = function (evt) {
-        this.mdown = {
-            offset: { x: evt.offsetX, y: evt.offsetY },
-            screen: { x: evt.screenX, y: evt.screenY },
-            left: this.offsetLeft,
-            top: this.offsetTop,
-            width: this.offsetWidth,
-            height: this.offsetHeight,
-            addWidth: function (x) {
-                var d = x - this.x;
-                return this.width + d;
-            },
-            addHeight: function (y) {
-                var d = y - this.y;
-                return this.height + d;
-            },
-            moving: this.ptop.style.cursor == 'move' && evt.buttons == MouseButtons.LEFT,
-            resizing: this.resizable && (this.style.cursor == 'se-resize' || this.style.cursor == 'e-resize' || this.style.cursor == 's-resize') && evt.buttons === MouseButtons.LEFT
-        };
-        this.parentNode.selectedWindow = this;
-    }
-
-    element.onmouseup = function () {
-        this.mdown = null;
-        this.ptop.style.cursor = 'default';
-    }
-
-    element.onmousemove = function (evt) {
-        if (this.mdown) return;
-        intop = evt.y < this.offsetTop + this.ptop.offsetHeight;
-
-        if (intop) {
-            this.ptop.style.cursor = 'move';
-            return;
-        } else {
-            if (this.ptop.style.cursor != 'default') this.ptop.style.cursor = 'default';
-        }
-
-        if (!this.resizable) {
-            if (this.style.cursor != 'default') this.style.cursor = 'default';
-            return;
-        }
-
-        var rx = this.offsetWidth - 10;
-        var by = this.offsetHeight - 10;
-        inborderx = rx < evt.offsetX && evt.offsetX < this.offsetWidth;
-        inbordery = by < evt.offsetY && evt.offsetY < this.offsetHeight;
-        if (!(inborderx || inbordery)) {
-            this.style.cursor = 'default';
-        } else if (inborderx && inbordery) {
-            this.style.cursor = 'se-resize';
-        } else if (inborderx) {
-            this.style.cursor = 'e-resize';
-        } else if (inbordery) {
-            this.style.cursor = 's-resize';
-        }
-    }
-
-    element.ptop.onmouseup = function (e) {
-        this.mdown = null;
-    };
-    /*=========================*/
-
-    element.style.position = "absolute";
-
-    //properties
-    element.onclose = null;
-
-    //methods and functions
-    element.move = function (x, y) {
-        if (y < 0) y = 0;
-        if (this.maximinized()) return;
-        this.defaultLeft = x;
-        this.defaultTop = y;
-        this.style.top = y + "px";
-        this.style.left = x + "px";
-    };
-
-    element.show = function () {
-        if (element.mask) element.mask.style.visibility = 'visible';
-        this.style.visibility = 'visible';
-    };
-
-    element.alignCenter = function () {
-        wmx = (this.parentNode.offsetWidth / 2).toFixed(0);
-        wmy = (this.parentNode.offsetHeight / 2).toFixed(0);
-        emx = (this.offsetWidth / 2).toFixed(0);
-        emy = (this.offsetHeight / 2).toFixed(0);
-        this.move(wmx - emx, wmy - emy);
-    };
-
-    element.appendChild = function (child) {
-        element.mainpanel.appendChild(child);
-    }
-
-    element.setProperties(args);
-
-    element.parentNode.onmousemove = function (evt) {
-        if (!this.selectedWindow) return;
-        var win = this.selectedWindow;
-        if (!win.mdown) return;
-        var dx = evt.screenX - win.mdown.screen.x;
-        var dy = evt.screenY - win.mdown.screen.y;
-        if (win.mdown.moving) {
-            win.move(win.mdown.left + dx, win.mdown.top + dy);
-        } else if (win.mdown.resizing) {
-            if (win.style.cursor == 'se-resize') {
-                win.size(win.mdown.width + dx, win.mdown.height + dy);
-            } else if (win.style.cursor == 'e-resize') {
-                win.size(win.mdown.width + dx, win.mdown.height);
-            } else if (win.style.cursor == 's-resize') {
-                win.size(win.mdown.width, win.mdown.height + dy);
-            }
-        }
-    };
-
-    element.parentNode.onmouseup = function (evt) {
-        if (!this.selectedWindow) return;
-        var win = this.selectedWindow;
-        win.mdown = null;
-        win.ptop.style.cursor = 'default';
-    };
-
-    return element;
-
-}
+function newJPWindow(args = {}) { return new JPWindow(args); }
 
 /**
  * Cria uma janela de diálogo. É uma especialização de JPWindow.
@@ -1496,7 +1197,7 @@ function newJPWindow(args = {}) {
  * `exitinclick`: `false` para não sair com o click fora da janela, `true` para o contrário.
  * 
  */
-class JPDialog extends newJPWindow {
+class JPDialog extends JPWindow {
 
     constructor(args={}) {
 
@@ -1578,87 +1279,26 @@ class JPDialog extends newJPWindow {
     }
 }
 
-function newJPDialog(args = {}) {
+function newJPDialog(args = {}) { return new JPDialog(args); }
 
-    return new JPDialog(args);
-
-    var element = newJPWindow({ resizable: false, toplevel: true, topbuttons: false });
-
-    element.className += " dialog";
-    element.__content = newElement('div', { parent: element });
-    element.__content.className = "content";
-    element.__content.style.padding = '10px';
-    element.__dbuttons = newJPPanel({ parent: element, className: "buttons" });
-    element.__exitinclick = false;
-
-    Object.defineProperty(element, 'exitinclick', {
-        set(value) {
-            if (!element.toplevel) return;
-            if (element.__exitinclick === value) { return; }
-            element.__exitinclick = value;
-            if (value === true) {
-                element.mask.onclick = function (e) {
-                    var child = this.child;
-                    if (child.offsetLeft < e.clientX && e.clientX < (child.offsetLeft + child.clientWidth) &&
-                        child.offsetTop < e.clientY && e.clientY < (child.offsetTop + child.clientHeight)) {
-                        return;
-                    }
-                    this.destroy();
-                }
-            } else {
-                element.mask.onclick = null;
-            }
-        },
-        get() { return element.__exitinclick; }
-    });
-
-    Object.defineProperty(element, 'buttons', {
-        set(value) {
-            element.__dbuttons.innerHTML = "";
-            value.forEach(function (item, index) {
-                element.__dbuttons.appendChild(item);
-                item.window = element;
-                if (item.result !== null) {
-                    item.onclick = function () {
-                        this.window.onresult && this.window.onresult(this.window, this.result);
-                    };
-                }
-            });
-        },
-        get() { return element.__dbuttons.childNodes; }
-    });
-
-    Object.defineProperty(element, 'content', {
-        set(value) {
-            element.setContent(value);
-        },
-        get() { return element.__content.childNodes.length > 0 ? element.__content.childNodes[0] : null; }
-    });
-
-    element.setContent = function (obj) {
-        this.__content.innerHTML = '';
-        if (obj) this.__content.appendChild(obj);
-        this.alignCenter();
+/**
+ * 
+ * @param {string} title 
+ * @param {string} msg 
+ * @param {Function} onclose 
+ * @returns 
+ */
+class DialogMessage extends JPDialog {
+    constructor(title, msg, onclose = null) {
+        super({
+            title: title,
+            content: newJPLabel({ text: msg }),
+            buttons: [newJPButton({ text: 'Ok' })],
+            exitinclick: true
+        });
+        this.ondestroy = onclose;
+        this.showModal((win, result) => { win.destroy(); });
     }
-
-    element.showModal = function (onresult) {
-        this.onresult = onresult;
-        this.show();
-    };
-
-    element.onresized = function () {
-        this.__content.style.width = (this.offsetWidth - 40) + 'px';
-        this.__content.style.height = (this.offsetHeight - this.__dbuttons.offsetHeight - this.ptop.offsetHeight - 40) + 'px';
-    }
-
-    element.onresult = null;
-
-    element.setProperties(args);
-
-    element.alignCenter();
-
-    return element;
-
 }
 
 /**
@@ -1669,17 +1309,39 @@ function newJPDialog(args = {}) {
  * @returns 
  */
 function newDialogMessage(title, msg, onclose = null) {
-    var bok = newJPButton({ text: 'Ok' });
-    bok.result = ResponseResult.OK;
-    var dlg001 = newJPDialog({
-        title: title,
-        content: newJPLabel({ text: msg }),
-        buttons: [bok],
-        exitinclick: true
+    return new DialogMessage(title, msg, onclose);
+}
+
+function msgBox(title_, msg_, results = [], response = null) {
+    var dlg = new JPDialog({
+        title: title_,
+        content: newJPLabel({text: msg_}),
+        buttons: (() => {
+            var btns = [];
+            results = results ? (results.length > 0 ? results : [ResponseResult.OK]) : [ResponseResult.OK];
+            for (var i = 0 ; i < results.length ; i++) {
+                switch (results[i]) {
+                    case ResponseResult.CANCEL:
+                        btns.push(newJPButton({text: 'Cancelar', result: ResponseResult.CANCEL}));
+                        break;                    
+                    case ResponseResult.YES:
+                        btns.push(newJPButton({text: 'Sim', result: ResponseResult.YES}));
+                        break;
+                    case ResponseResult.NO:
+                        btns.push(newJPButton({text: 'Não', result: ResponseResult.NO}));
+                        break;
+                    default:
+                        btns.push(newJPButton({text: 'Ok', result: ResponseResult.OK}));
+                }
+            }
+            return btns;
+        })()
     });
-    dlg001.ondestroy = onclose;
-    dlg001.showModal(function (sender, result) { sender.destroy(); });
-    return dlg001;
+    dlg.__response = response;
+    dlg.showModal((win, r) => {
+        win.destroy();
+        win.__response && win.__response(r);
+    });
 }
 
 function newInput(width, props = {}) {
