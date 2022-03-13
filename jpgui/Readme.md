@@ -1,8 +1,8 @@
-## JPGUI
+# JPGUI
 
 JPGUI é uma biblioteca que cria elementos e janelas para uma aplicação web. A ideia é utilizar o javascript da mesma forma que outras linguagens utilizam para criação de elementos GUI.
 
-#### Uso
+## Uso
 
 Para utilizar, baixe os arquivos 'jpgui.js' e 'jpgui.css' para o seu projeto e depois os referencie no documento html.
 
@@ -41,7 +41,8 @@ mydialog.showModal(function (windialog, result) {
 });
 ```
 
-#### Classe MyElement
+## Classes
+### Classe MyElement
 ```javascript
 /**
  * @param {string} tag: nome da tag html.
@@ -94,7 +95,7 @@ usremail.parent = myform;
 myform.appendChild(usremail);
 ```
 
-#### Classe JPInput
+### Classe JPInput
 `constructor JPPanel(props={})`
 
 A classe JPInput implementa elementos quem servem para entrada de dados. Ela implementa os `<input />` do html. Além dos inputs normais do HTML, ela também implementa dois tipos de inputs personalizados: `select` e `currency`;
@@ -104,15 +105,41 @@ Ex.:
 var usremail = new JPInput({parent: myform, type: "email"});
 ```
 
-### Containers
+O tipo `select` cria um objeto da classe `JPComboBox`. Já o tipo `currency` cria um objeto da classe `JPInputCurrency`. as duas classes serão abordadas a seguir.
 
-#### Classe JPPanel
+### Classe JPInputCurrency
+`constructor JPInputCurrency(props={})`
+
+### Classe JPTextArea
+`constructor JPTextArea(props={})`
+
+Cria um objeto da tag `<textarea></textarea>` do html.
+
+Ex.:
+```javascript
+var txt = new JPTextArea({
+    parent: myform, rows: 5, cols: 20, readonly: true,
+    text: "Minha área de texto."
+});
+```
+
+### Classe JPPanel
 `constructor JPPanel(props={})`
 
 A classe JPPanel implementa um painel que contém vários elementos. A ordem que os elementos aparecem será a de inserção no painel.
 
 Ex.:
 ```javascript
+// cria um painel no elemento body
+var mypanel = new JPPanel({parent: document.body});
 
+// insere um label no painel
+mypanel.appendChild(new JPLabel({text: 'Usuários'}));
+
+// insere uma tableview no painel
+var mytable = new JPTableView({
+    parent: mypanel,
+    header: ['Nome', 'Endereço', 'Telefone']
+});
 ```
 

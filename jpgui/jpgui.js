@@ -169,7 +169,7 @@ function newElement(tag, args = {}) {
     return new MyElement(tag, args);
 }
 
-class InputCurrency extends MyElement {
+class JPInputCurrency extends MyElement {
 
     constructor(args={}) {
         args.type = "text";
